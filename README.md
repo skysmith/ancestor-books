@@ -8,13 +8,14 @@ Default publication target is Amazon KDP paperback. See [`KDP.md`](./KDP.md) for
 
 ## Repository Map
 
-This repository is organized as one folder per book inside `projects/`.
+This repository is organized as one folder per mainline book inside `projects/`.
 
-- `projects/captain-daniel-and-the-night-of-courage/` active book 1 package with manuscript, storyboard, exports, and production files
-- `projects/the-hungry-winter/` active book 2 package with manuscript, storyboard, outputs, and production files
-- `projects/the-honey-barrel-trick/` active book 3 package for the combined honey episode, with manuscript, storyboard, outputs, and production files
-- `projects/the-watchful-dog/` alternate split-out dog episode package
-- `projects/the-torys-honey/` alternate split-out camp-search honey episode package
+- `projects/01-captain-daniel-and-the-night-of-courage/` active book 1 package with manuscript, storyboard, exports, and production files
+- `projects/02-the-hungry-winter/` active book 2 package with manuscript, storyboard, outputs, and production files
+- `projects/03-the-watchful-dog/` active book 3 package
+- `projects/04-the-torys-honey/` active book 4 package using the strongest current honey-story build
+
+Archived or alternate versions live in `archive/` when a folder is no longer part of the mainline sequence.
 
 ## Standard Book Folder Shape
 
@@ -83,6 +84,18 @@ Use this checklist for future project creation:
 
 1. Night of Courage
 2. The Hungry Winter
-3. Captain Daniel and the Tory's Honey
-4. The Watchful Dog (alternate split setup version)
-5. The Tory's Honey (alternate split camp-search version)
+3. The Watchful Dog
+4. The Tory's Honey
+
+## Archive
+
+- `archive/04-the-torys-honey-split-version/` older split camp-search version preserved during folder cleanup
+
+## Editorial Note
+
+The current `04-the-torys-honey` folder contains the strongest combined honey-story build. That means there is still some narrative overlap with `03-the-watchful-dog`.
+
+If you later want the cleanest non-overlapping series, choose one of these paths:
+
+- keep `03-the-watchful-dog` and revise `04-the-torys-honey` back to the camp-search-only version
+- or keep the combined `04-the-torys-honey` and retire `03-the-watchful-dog`

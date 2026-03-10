@@ -37,6 +37,7 @@ The art should balance night stealth and indoor/camp-close suspense without beco
 - Young, quick, and dependable
 - Less physically dominant than in Book 1
 - Should feel like a natural part of the group response
+- Use the continuity anchor in `art/references/daniel-cook-character-sheet.md` for face, hat, clothing, and posture consistency across spreads
 
 ### Tory
 
