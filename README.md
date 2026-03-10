@@ -35,6 +35,7 @@ Each project should follow the same baseline structure, even if some folders sta
 - `storyboard/renders/selects/` chosen renders
 - `outputs/` compiled contact sheets, rough dummy PDFs, and presentation exports
 - `production/production-notes.md` print, sequencing, and handoff notes
+- `production/kdp-checklist.md` per-book publication checklist copied from `templates/kdp-checklist.template.md`
 - `production/end-to-end-plan.md` project pipeline notes when the book is far enough along to need them
 - `scripts/` one-off helpers used by that specific book
 
@@ -53,6 +54,7 @@ When creating book 6 or any later project, use this sequence:
    - `notes/project-brief.md`
    - `art/briefs/illustration-brief.md`
    - `production/production-notes.md`
+   - `production/kdp-checklist.md` copied from `templates/kdp-checklist.template.md`
 5. Add `manuscript/source-outline.md` as soon as source text, quotes, or chronology has been gathered.
 6. Add storyboard folders only when the manuscript is stable enough for visual sequencing:
    - `storyboard/prompts/`
@@ -74,6 +76,7 @@ Use this checklist for future project creation:
 - Write or expand the illustration brief once the emotional beats are stable.
 - Only start storyboard prompt generation after the dummy layout is coherent.
 - Export contact sheets and rough dummies into `outputs/` rather than scattering them elsewhere.
+- Copy `templates/kdp-checklist.template.md` into the new project's `production/` folder early so publication requirements stay visible.
 - Keep one project per ancestor story; avoid mixing multiple books in one folder.
 
 ## Series Plan

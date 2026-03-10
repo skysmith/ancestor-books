@@ -87,9 +87,12 @@ Before uploading to KDP, confirm:
 To keep each project publication-ready, each book should eventually include:
 
 - print specs in `production/production-notes.md`
+- a per-book checklist at `production/kdp-checklist.md`
 - final export filenames in `outputs/`
 - a short publication checklist in `production/`
 - notes on what was done in Canva, if Canva was used
+
+Start from `templates/kdp-checklist.template.md` when creating the per-book checklist.
 
 ## Sources
 
