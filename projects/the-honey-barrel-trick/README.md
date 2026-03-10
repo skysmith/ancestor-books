@@ -1,4 +1,4 @@
-# The Honey Barrel Trick
+# Captain Daniel and the Tory's Honey
 
 Children's picture book project based on a family/ancestor survival story.
 
@@ -8,15 +8,15 @@ Book 3
 
 ## Working Title
 
-The Honey Barrel Trick
+Captain Daniel and the Tory's Honey
 
 ## Core Theme
 
-Wit, resourcefulness, and survival.
+Wit, quick thinking, and survival.
 
 ## Status
 
-Project scaffold ready. Waiting for source outline/manuscript content.
+Active combined-manuscript version. Core manuscript, dummy, storyboard scaffold, and first hybrid visual dummy exist.
 
 ## Project Structure
 
@@ -28,6 +28,6 @@ Project scaffold ready. Waiting for source outline/manuscript content.
 
 ## Next Steps
 
-1. Paste the raw outline into `manuscript/source-outline.md`.
-2. Turn that outline into a 32-page dummy layout.
-3. Build the illustration brief after pacing is locked.
+1. Tighten the combined manuscript into a quieter final read-aloud draft.
+2. Revise the dummy so the camp-search ending has enough page space if needed.
+3. Refresh visual prompts and hybrid dummy to match the new combined structure.

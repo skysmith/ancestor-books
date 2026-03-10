@@ -1,0 +1,7 @@
+{
+  "slug": "spread-10-v001",
+  "model": "gpt-image-1",
+  "size": "1536x1024",
+  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Tight scrutiny scene. The captain has just said, 'He has the toothache,' while the Tory studies the soldiers in silence. Use grouped faces, stillness, and eye-lines as the drama. Low light should remain readable on faces. No slapstick and no repeated wide composition. Text-safe space, muted period palette, textured brushwork.",
+  "source_spec": "/Users/sky/.openclaw/workspace/ancestor-books/projects/the-honey-barrel-trick/storyboard/book3-anchor-spec-v001b.json"
+}

@@ -12,9 +12,9 @@ This repository is organized as one folder per book inside `projects/`.
 
 - `projects/captain-daniel-and-the-night-of-courage/` active book 1 package with manuscript, storyboard, exports, and production files
 - `projects/the-hungry-winter/` active book 2 package with manuscript, storyboard, outputs, and production files
-- `projects/the-honey-barrel-trick/` active book 3 package with manuscript, art brief, and production notes
-- `projects/the-watchful-dog/` active book 4 package with manuscript, art brief, and production notes
-- `projects/the-torys-honey/` active book 5 package with manuscript, art brief, and production notes
+- `projects/the-honey-barrel-trick/` active book 3 package for the combined honey episode, with manuscript, storyboard, outputs, and production files
+- `projects/the-watchful-dog/` alternate split-out dog episode package
+- `projects/the-torys-honey/` alternate split-out camp-search honey episode package
 
 ## Standard Book Folder Shape
 
@@ -83,6 +83,6 @@ Use this checklist for future project creation:
 
 1. Night of Courage
 2. The Hungry Winter
-3. The Honey Barrel Trick
-4. The Watchful Dog
-5. The Tory's Honey
+3. Captain Daniel and the Tory's Honey
+4. The Watchful Dog (alternate split setup version)
+5. The Tory's Honey (alternate split camp-search version)

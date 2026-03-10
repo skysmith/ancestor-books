@@ -16,7 +16,7 @@ Captain addressing exhausted men by low winter light; this quote should land cle
 
 ## First-Pass Prompt
 
-Painterly historical realism for a children's Revolutionary War picture book. Young Daniel Cook, visibly teenage and vulnerable rather than heroic, in blue-gray night tones with warm firelight or musket flashes where appropriate. Scene focus: At last their captain spoke. "Go out and take some Tory's chickens," he said, "or anything you can find." Illustration direction: Captain addressing exhausted men by low winter light; this quote should land clearly and simply. Text-safe composition, emotionally clear faces, textured brushwork, subtle period costume detail, no graphic violence.
+Painterly historical realism for a children's Revolutionary War picture book. Scene focus: At last their captain spoke. "Go out and take some Tory's chickens," he said, "or anything you can find." Illustration direction: captain addressing exhausted men by low winter light; this quote should land clearly and simply. Make this a group tableau with the captain as the focal speaker, not Daniel. Medium-wide composition, several tired soldiers arranged around him in a semicircle or clustered camp formation. The captain should occupy the visual center or slight elevation, with Daniel present but not foreground-dominant. Warmth should be scarce and localized. Clear quote-friendly negative space near the captain.
 
 ## Continuity Reminders
 
@@ -24,3 +24,4 @@ Painterly historical realism for a children's Revolutionary War picture book. Yo
 - Keep his hat consistent until the bullet hole becomes important later.
 - Use painterly brushwork and historical realism, not slick digital rendering.
 - Preserve room for text; avoid placing faces behind main copy blocks.
+- The captain is the lead figure here, not Daniel.

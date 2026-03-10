@@ -1,0 +1,7 @@
+{
+  "slug": "spread-04",
+  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Scene focus: At last the men grew so desperate they roasted their shoes and ate them. Even that was not enough. Illustration direction: stark campfire scene with a boot or shoe near flame, soldiers gaunt and weary, handled with restraint rather than shock. Make this an object-led composition, not a character portrait. The shoe and low fire are the focal point, positioned low in frame, with weary soldiers pushed back in softer shadow. Intimate but restrained camera, near still-life feeling, small warm core inside cold darkness. Avoid any large foreground face. Keep upper area simpler for text. Additional global direction: painterly historical realism, Revolutionary War winter hardship, cold gray-blue palette with warmth scarce, landscape orientation, clear text-safe composition. Do not repeat the same medium-close portrait framing across spreads. Each image must obey the spread-specific composition instructions exactly.",
+  "model": "gpt-image-1",
+  "size": "1536x1024",
+  "version": "v002"
+}

@@ -1,0 +1,7 @@
+{
+  "slug": "spread-02-v001",
+  "model": "gpt-image-1",
+  "size": "1536x1024",
+  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Wide night approach scene, not a portrait. Daniel Cook and several hungry soldiers move quietly through a brighter blue-gray night toward a Tory property in the distance. Use moonlight, reflected winter light, or a faint house glow so the scene is clearly readable. The captain's order hangs over the scene: they are searching for food, not glory. Make the property a faint destination, with figures small against the dark land. Open text-safe sky. Textured brushwork, restrained emotion, no graphic violence.",
+  "source_spec": "/Users/sky/.openclaw/workspace/ancestor-books/projects/the-honey-barrel-trick/storyboard/book3-anchor-spec-v001.json"
+}

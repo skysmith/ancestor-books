@@ -1,4 +1,4 @@
-# The Honey Barrel Trick
+# Captain Daniel and the Tory's Honey
 
 ## Status
 
@@ -6,62 +6,146 @@ Active manuscript draft.
 
 ## Story Draft
 
-The soldiers were still hungry.
+Daniel Cook and the soldiers in his company
+had been hungry for many days.
 
-Winter had been long.
+Winter had been hard.
 
-Food was hard to find.
+Food was scarce in camp.
 
-But the captain had given them an order.
+At last their captain gave the order.
 
-"Go out and take some Tory's chickens," he said,  
+"Go out and take some Tory's chickens," he said,
 "or anything you can find."
 
-So Daniel Cook and several soldiers went quietly through the dark.
+The soldiers knew of a Tory nearby
+who had food.
 
-They came to the house of a Tory.
+But the man guarded his house carefully.
 
-Inside the house were supplies the soldiers badly needed.
+A large bulldog watched the yard.
 
-But they had to be careful.
+No one could come near in the night
+without waking the beast.
 
-If the Tory discovered them, everything would be lost.
+So the soldiers made a plan.
 
-The soldiers moved quickly and quietly.
+Daniel Cook would stand guard.
 
-One of them lifted the lid of a small cask.
+The others would slip quietly
+toward the barns and the bee house
+to see what food they might find.
 
-Inside was honey.
+The night was dark.
 
-Without thinking, he plunged his hand inside.
+The air was cold.
 
-The honey was thick and sticky.
+Daniel walked carefully toward the house.
 
-When he pulled his hand back out, it was covered.
+For a moment
+the yard was still.
 
-The soldier quickly slammed the lid down.
+Then the dog came.
 
-Just then the Tory appeared.
+It rushed from the darkness
+in a great fury.
 
-The soldier grabbed his handkerchief and began wiping the honey from his hand.
+Daniel saw at once
+he must defend himself.
 
-Then he said loudly,
+He raised his musket
+and fired.
 
-"Boys, what in thunder do you keep soap here for?"
+The dog fell.
 
-Daniel answered at once.
+The shot brought the Tory
+running to the door in anger.
 
-"We have to keep it there or the soldiers will steal it from us."
+He demanded to know
+why the soldier had fired.
 
-The Tory looked puzzled.
+Daniel answered calmly.
 
-But he seemed satisfied.
+He told the man
+he had shot the dog
+because every time he stood guard
+he was in danger of being torn to pieces.
 
-Then he noticed one of the soldiers.
+The old Tory scolded and argued.
 
-The man stood with his mouth wide open.
+Daniel stood with him in the cold
+and listened.
 
-His tongue was swollen from the sting of a bee.
+After some time
+the old man turned and went back inside.
+
+When Daniel returned to camp
+he discovered something.
+
+While the Tory had been arguing with him
+outside...
+
+the other soldiers had slipped
+into the bee house.
+
+And they had taken honey.
+
+But the story was not finished.
+
+The next morning
+the old Tory came to the army camp.
+
+He was looking
+for his stolen honey.
+
+The captain listened carefully.
+
+"I do not think my boys have it," he said.
+
+"But we will search."
+
+So they walked through the camp together.
+
+The Tory looked everywhere.
+
+He peered into tents.
+
+He examined boxes.
+
+He searched the soldiers' mess.
+
+At last he came to a chest.
+
+Inside was a small cask.
+
+The captain opened it.
+
+A soldier put his hand inside.
+
+He pulled it out suddenly,
+covered in honey.
+
+Then he slammed down the lid.
+
+Taking his handkerchief from his pocket,
+he wiped his hand and said,
+
+"Boys what in thunder do you keep soap here for?"
+
+Daniel answered quickly.
+
+"We have to keep it there
+or the soldiers will steal it from us."
+
+The old Tory watched them carefully.
+
+Just then he noticed another soldier.
+
+The man stood
+with his mouth wide open.
+
+His tongue was swollen
+from the sting of a bee.
 
 The Tory pointed at him.
 
@@ -71,15 +155,16 @@ The captain answered calmly.
 
 "He has the toothache."
 
-For a long moment the Tory studied them.
+For a long moment
+the Tory studied the soldiers.
 
-No one moved.
+Then he nodded.
 
-No one spoke.
+Satisfied,
+he turned and left the camp.
 
-Then the old man nodded and turned away.
-
-The soldiers waited until he was gone.
+The soldiers waited
+until he was gone.
 
 Then they looked at one another.
 
@@ -89,11 +174,11 @@ War was full of danger.
 
 Sometimes it was full of hunger.
 
-But now and then,
+And sometimes,
 
-a little cleverness
+a little quick thinking
 
-could save the day.
+was enough.
 
 ## Required Preserved Quotes
 

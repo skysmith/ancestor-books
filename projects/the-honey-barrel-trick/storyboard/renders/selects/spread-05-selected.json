@@ -1,0 +1,7 @@
+{
+  "slug": "spread-05-v001",
+  "model": "gpt-image-1",
+  "size": "1536x1024",
+  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Intimate object-led close-up, not a full figure portrait. A soldier's hand emerges from a small opened cask coated in thick amber honey while another hand starts to slam the lid down. Faces only partial or peripheral. Strong tactile detail, sticky honey catching dim but readable light, sudden panic in the composition. Text-safe margins. Textured brushwork, restrained historical tone.",
+  "source_spec": "/Users/sky/.openclaw/workspace/ancestor-books/projects/the-honey-barrel-trick/storyboard/book3-anchor-spec-v001.json"
+}

@@ -15,7 +15,7 @@ Very simple final image, soldiers disappearing into the dark or faint dawn, emph
 
 ## First-Pass Prompt
 
-Painterly historical realism for a children's Revolutionary War picture book. Young Daniel Cook, visibly teenage and vulnerable rather than heroic, in blue-gray night tones with warm firelight or musket flashes where appropriate. Scene focus: hoping they might find enough to keep marching one more day. Illustration direction: Very simple final image, soldiers disappearing into the dark or faint dawn, emphasizing endurance rather than triumph. Text-safe composition, emotionally clear faces, textured brushwork, subtle period costume detail, no graphic violence.
+Painterly historical realism for a children's Revolutionary War picture book. Scene focus: hoping they might find enough to keep marching one more day. Illustration direction: very simple final image, soldiers disappearing into the dark or faint dawn, emphasizing endurance rather than triumph. Make this a minimal distance composition with tiny figures or nearly empty landscape, not a character close-up. The environment and path matter more than faces. Very sparse value structure, subdued horizon, strong feeling of continuation and smallness. Large text-safe field. No foreground portrait, no campfire focal point, no heroic pose.
 
 ## Continuity Reminders
 
@@ -23,3 +23,4 @@ Painterly historical realism for a children's Revolutionary War picture book. Yo
 - Keep his hat consistent until the bullet hole becomes important later.
 - Use painterly brushwork and historical realism, not slick digital rendering.
 - Preserve room for text; avoid placing faces behind main copy blocks.
+- This spread should be the simplest and least portrait-driven image in the set.

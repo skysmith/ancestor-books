@@ -20,6 +20,8 @@ The art should balance night stealth and indoor/camp-close suspense without beco
 - Keep Daniel young and emotionally readable.
 - Build tension through proximity and silence rather than exaggerated expression.
 - Let the book shift from cold night stealth into tighter, more intimate suspicion.
+- Keep night scenes brighter and more legible than near-black cinematic night; use moonlight, reflected winter light, doorway glow, or lantern spill so action reads immediately.
+- Push spread-to-spread variety so the approach, honey reveal, lie, scrutiny, and relief each have distinct composition and camera distance.
 
 ## Tone And Pacing
 

@@ -1,0 +1,7 @@
+{
+  "slug": "spread-01",
+  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Scene focus: Winter was hard on the soldiers. The wind cut through their coats. The ground was cold. The days were long. And the food was almost gone. Illustration direction: snowy or barren winter camp, soldiers hunched against wind, muted palette, immediate feeling of cold. Use a true wide establishing composition, not a portrait. Daniel should be small within the environment, one figure among several, with the camp and weather as the main subject. High horizon, large open cold sky, broad gray-blue field, very little firelight, no close face dominating the frame. Text-safe negative space in the sky. Textured brushwork, subtle period costume detail, no graphic violence. Additional global direction: painterly historical realism, Revolutionary War winter hardship, cold gray-blue palette with warmth scarce, landscape orientation, clear text-safe composition. Do not repeat the same medium-close portrait framing across spreads. Each image must obey the spread-specific composition instructions exactly.",
+  "model": "gpt-image-1",
+  "size": "1536x1024",
+  "version": "v002"
+}
