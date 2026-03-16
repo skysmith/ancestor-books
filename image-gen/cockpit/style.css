@@ -230,6 +230,13 @@ body {
   color: #58657f;
 }
 
+.generate-status-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  max-width: 28rem;
+}
+
 .magic-book-progress-badge.running {
   background: #eaf1ff;
   color: #3658d8;

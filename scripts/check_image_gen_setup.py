@@ -107,6 +107,28 @@ def summarize_error(text: str) -> str:
     return " | ".join(lines[:3])
 
 
+def check_model_runtime(ollama_bin: Path, model_name: str, timeout: int = 15) -> CheckResult:
+    try:
+        proc = subprocess.run(
+            [str(ollama_bin), "show", model_name],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return CheckResult("FAIL", "Generator runtime unhealthy", f"{model_name} timed out during `ollama show`.")
+    except (subprocess.SubprocessError, OSError) as exc:
+        return CheckResult("FAIL", "Generator runtime unhealthy", f"{model_name}: {exc}")
+    if proc.returncode != 0:
+        return CheckResult(
+            "FAIL",
+            "Generator runtime unhealthy",
+            f"{model_name}: {summarize_error(proc.stderr or proc.stdout or 'Runtime health check failed')}",
+        )
+    return CheckResult("PASS", "Generator runtime healthy", model_name)
+
+
 def check_ollama(manifest: dict) -> list[CheckResult]:
     results: list[CheckResult] = []
     ollama_bin = find_ollama_binary()
@@ -131,6 +153,8 @@ def check_ollama(manifest: dict) -> list[CheckResult]:
             continue
         if model_present(name, installed):
             results.append(CheckResult("PASS", "Model present", name))
+            if model.get("role") == "image_generation":
+                results.append(check_model_runtime(ollama_bin, name))
         else:
             results.append(CheckResult("FAIL", "Model missing", name))
     return results

@@ -138,6 +138,7 @@ function cacheElements() {
     "lastUpdated",
     "assetSelect",
     "generationStatus",
+    "generationStatusMeta",
     "generationLog",
     "abortGeneratorBtn",
     "projectSelect",
@@ -570,8 +571,8 @@ function showTab(name, options = {}) {
 }
 
 async function refreshData() {
-  spreads = await fetchJson("/api/spreads");
-  const assetResponse = await fetchJson("/api/assets");
+  spreads = await fetchJson(`/api/spreads?project_id=${encodeURIComponent(currentProjectId)}`);
+  const assetResponse = await fetchJson(`/api/assets?project_id=${encodeURIComponent(currentProjectId)}`);
   if (Array.isArray(assetResponse)) {
     assets = assetResponse;
   } else if (assetResponse?.items && Array.isArray(assetResponse.items)) {
@@ -1883,7 +1884,7 @@ async function patchSpread(spreadId, updates) {
   const response = await fetch(`/api/spreads/${spreadId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, project_id: currentProjectId }),
   });
   if (!response.ok) {
     console.error("Failed to patch spread", await response.text());
@@ -1919,6 +1920,7 @@ async function handleFileUpload(file) {
   const form = new FormData();
   form.append("file", file);
   form.append("spread_id", activeSpreadId);
+  form.append("project_id", currentProjectId);
   form.append("label", file.name);
   const response = await fetch("/api/assets/upload", { method: "POST", body: form });
   if (!response.ok) {
@@ -1943,7 +1945,7 @@ async function handleFileUpload(file) {
 }
 
 async function refreshAssets() {
-  assets = await fetchJson("/api/assets");
+  assets = await fetchJson(`/api/assets?project_id=${encodeURIComponent(currentProjectId)}`);
   populateAssetSelect();
   renderAssetsView();
 }
@@ -2019,7 +2021,7 @@ async function createPlaceholderAsset() {
   const response = await fetch("/api/assets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ label: "Placeholder", mirror_url: gradient, spread_ids: [] }),
+    body: JSON.stringify({ label: "Placeholder", mirror_url: gradient, spread_ids: [], project_id: currentProjectId }),
   });
   const asset = await response.json();
   await refreshAssets();
@@ -2135,12 +2137,13 @@ function shortPathLabel(value) {
 async function runGenerator() {
   if (!activeSpreadId) return;
   const payload = {
+    project_id: currentProjectId,
     spread_id: activeSpreadId,
     prompt: refs.generatePrompt.value,
     reference_notes: refs.referenceNotesField?.value || "",
     negative: refs.generateNegative.value,
     seed: refs.generateSeed.value,
-    size: "1024x1024",
+    size: "1536x768",
     judge_model: refs.judgeModel.value || generationConfig.judge_model,
     judge_threshold: refs.judgeThreshold.value || generationConfig.judge_threshold,
     max_recursive_fails: refs.maxFails.value || generationConfig.max_recursive_fails,
@@ -2178,12 +2181,56 @@ function updateAbortButtonState(state) {
   refs.abortGeneratorBtn.disabled = !running;
 }
 
+function formatElapsedMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function buildGenerationStatusMeta(state) {
+  if (!state?.running) {
+    if (state?.last_error) {
+      return "The last run stopped with an error.";
+    }
+    return "Waiting for a run.";
+  }
+  const startedAt = state?.attempt_started_at ? new Date(state.attempt_started_at) : null;
+  const startedValid = startedAt && !Number.isNaN(startedAt.getTime());
+  const elapsedMs = startedValid ? Date.now() - startedAt.getTime() : 0;
+  const elapsedLabel = startedValid ? formatElapsedMs(elapsedMs) : "";
+  const timeoutSeconds = Number(state?.attempt_timeout_seconds || 0);
+  const timeoutMs = timeoutSeconds > 0 ? timeoutSeconds * 1000 : 0;
+  const generatorLabel = String(state?.generator_label || "x/z-image-turbo");
+  const lowerStatus = String(state?.status || "").toLowerCase();
+
+  if (lowerStatus.includes("attempt") && lowerStatus.includes("generating")) {
+    if (timeoutMs && elapsedMs > timeoutMs * 0.75) {
+      return `Still rendering on GPU with ${generatorLabel}. ${elapsedLabel} elapsed, which is longer than usual.`;
+    }
+    return `Still rendering on GPU with ${generatorLabel}${elapsedLabel ? ` • ${elapsedLabel} elapsed` : ""}.`;
+  }
+  if (lowerStatus.includes("review")) {
+    return "Image render finished. Running local review checks now.";
+  }
+  if (lowerStatus.includes("adjust")) {
+    return "Rewriting the prompt from the latest review scorecard.";
+  }
+  return startedValid ? `${elapsedLabel} elapsed.` : "Workflow active.";
+}
+
 function startStatusPoll() {
   if (statusPollTimer) return;
   const poll = async () => {
     try {
       const state = await fetchJson("/api/status");
       refs.generationStatus.textContent = state.status || "Idle";
+      if (refs.generationStatusMeta) {
+        refs.generationStatusMeta.textContent = buildGenerationStatusMeta(state);
+      }
       updateAbortButtonState(state);
       if (state.status && state.status !== lastStatus?.status) {
         logGeneration(state.status);

@@ -20,6 +20,7 @@ from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import Request, urlopen
 
@@ -27,16 +28,21 @@ from urllib.request import Request, urlopen
 MODEL = "x/z-image-turbo:latest"
 OLLAMA_BIN = shutil.which("ollama") or "/Applications/Ollama.app/Contents/Resources/ollama"
 DEFAULT_STEPS = "9"
-DEFAULT_SIZE = "1024x1024"
+DEFAULT_SIZE = "1536x768"
 DEFAULT_REVIEW_MODELS = "llava,qwen2.5vl"
 DEFAULT_PROMPT_FIXER_MODEL = "llama3.2:3b"
+IMAGE_GENERATION_TIMEOUT_SECONDS = 240
 SIZE_OPTIONS = [
+    "1536x768",
+    "1792x896",
     "768x768",
     "1024x1024",
     "1152x896",
     "896x1152",
     "1280x720",
     "720x1280",
+    "768x1536",
+    "896x1792",
 ]
 STEP_OPTIONS = ["4", "6", "8", "9", "10", "12"]
 
@@ -275,6 +281,11 @@ STATE = {
     "last_review": None,
     "last_review_path": "",
     "last_adjusted_prompt": "",
+    "attempt_started_at": "",
+    "attempt_timeout_seconds": IMAGE_GENERATION_TIMEOUT_SECONDS,
+    "generator_label": MODEL,
+    "generation_pass_current": None,
+    "generation_pass_total": None,
 }
 MANUSCRIPT_STATE = {
     "running": False,
@@ -337,6 +348,76 @@ def summarize_error_text(text: str, max_lines: int = 3) -> str:
     if not lines:
         return "Unknown error"
     return " | ".join(lines[:max_lines])
+
+
+def strip_ansi(text: str) -> str:
+    return re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "", text or "")
+
+
+def compact_image_prompt(prompt: str, max_story_words: int = 70) -> str:
+    normalized = " ".join(prompt.split())
+    if not normalized:
+        return normalized
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", normalized) if part.strip()]
+    if len(normalized.split()) <= max_story_words:
+        return normalized
+
+    style_sentences: list[str] = []
+    story_sentences: list[str] = []
+    style_markers = (
+        "painterly",
+        "storybook",
+        "historical realism",
+        "no visible text",
+        "no text",
+        "expressive composition",
+        "character continuity",
+        "text-safe",
+        "brushwork",
+    )
+    for sentence in sentences:
+        lower = sentence.lower()
+        if any(marker in lower for marker in style_markers):
+            style_sentences.append(sentence)
+        else:
+            story_sentences.append(sentence)
+
+    compact_story: list[str] = []
+    story_word_count = 0
+    for sentence in story_sentences:
+        sentence_words = sentence.split()
+        if compact_story and story_word_count + len(sentence_words) > max_story_words:
+            break
+        compact_story.append(sentence)
+        story_word_count += len(sentence_words)
+        if story_word_count >= max_story_words:
+            break
+
+    parts = compact_story or sentences[:1]
+    if style_sentences:
+        parts.append(style_sentences[-1])
+    return " ".join(parts).strip()
+
+
+def check_model_runtime_health(model_name: str, timeout: int = 15) -> tuple[bool, str]:
+    ollama_path = find_ollama_binary()
+    if not ollama_path:
+        return False, "Could not find `ollama` on PATH or at the standard macOS app location."
+    try:
+        proc = subprocess.run(
+            [str(ollama_path), "show", model_name],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"`ollama show {model_name}` did not finish within {timeout}s."
+    except (subprocess.SubprocessError, OSError) as exc:
+        return False, str(exc)
+    if proc.returncode != 0:
+        return False, summarize_error_text(proc.stderr or proc.stdout or "Model health check failed")
+    return True, "Model runtime responded."
 
 
 def find_ollama_binary() -> Path | None:
@@ -507,6 +588,11 @@ def get_setup_status() -> dict[str, object]:
                 if present
                 else (f"Ollama check failed: {ollama_error}" if ollama_error else "Install with `ollama pull`.")
             )
+            if bucket == "generator" and present:
+                healthy, health_detail = check_model_runtime_health(name)
+                if not healthy:
+                    status = "warning"
+                    detail = f"Runtime health check failed: {health_detail}"
             model_items.append(
                 {
                     "name": name,
@@ -712,6 +798,15 @@ def load_current_project() -> dict[str, object]:
         "label": project["label"],
         "path": str(project["path"]),
     }
+
+
+def resolve_project_id(project_id: str | None = None) -> str:
+    requested = (project_id or "").strip()
+    if requested:
+        project = get_dashboard_project(requested)
+        if project:
+            return str(project["id"])
+    return str(load_current_project()["project_id"])
 
 
 def save_current_project(project_id: str) -> dict[str, object]:
@@ -926,6 +1021,15 @@ def project_asset_url(project_id: str, path: Path) -> str:
     return f"/project-file/{project_id}/{rel.as_posix()}"
 
 
+def latest_project_render(raw_dir: Path, slug: str) -> tuple[Path | None, Path | None]:
+    candidates = sorted(raw_dir.glob(f"{slug}-v*.png"))
+    if not candidates:
+        return None, None
+    image_path = max(candidates, key=lambda path: path.stat().st_mtime)
+    json_path = image_path.with_suffix(".json")
+    return image_path, (json_path if json_path.exists() else None)
+
+
 def import_dashboard_project(project_id: str) -> dict[str, object]:
     project = get_dashboard_project(project_id)
     if not project:
@@ -934,6 +1038,7 @@ def import_dashboard_project(project_id: str) -> dict[str, object]:
     dummy_path = project_root / "manuscript" / "dummy-layout.md"
     title, units = parse_dummy_layout(dummy_path)
     selects_dir = project_root / "storyboard" / "renders" / "selects"
+    raw_dir = project_root / "storyboard" / "renders" / "raw"
     existing_spreads = {
         str(item.get("spread_id", "")): item
         for item in load_spreads()
@@ -952,6 +1057,13 @@ def import_dashboard_project(project_id: str) -> dict[str, object]:
             selected_png = selects_dir / f"{slug}-v001.png"
         if not selected_json.exists():
             selected_json = selects_dir / f"{slug}-v001.json"
+        asset_source_type = "project-select"
+        if not selected_png.exists():
+            fallback_png, fallback_json = latest_project_render(raw_dir, slug)
+            if fallback_png is not None:
+                selected_png = fallback_png
+                selected_json = fallback_json or selected_json
+                asset_source_type = "project-raw"
         selected_prompt = ""
         if selected_json.exists():
             try:
@@ -968,7 +1080,7 @@ def import_dashboard_project(project_id: str) -> dict[str, object]:
                 {
                     "asset_id": asset_id,
                     "label": f"{project['label']} {slug}",
-                    "source_type": "project-select",
+                    "source_type": asset_source_type,
                     "mirror_url": asset_preview,
                     "spread_ids": [slug],
                     "timestamp": datetime.fromtimestamp(selected_png.stat().st_mtime).isoformat(),
@@ -1847,6 +1959,7 @@ def run_magic_book_pipeline(project_id: str, title: str, story: str, overnight_m
                     "prompt_adjustment_strategy": generation_defaults.get("prompt_adjustment_strategy", DEFAULT_GENERATION_CONFIG["prompt_adjustment_strategy"]),
                     "allow_prompt_updates": generation_defaults.get("allow_prompt_updates", DEFAULT_GENERATION_CONFIG["allow_prompt_updates"]),
                 },
+                project_id=project_id,
                 review_project=str(project_info["path"]),
                 review_models=split_review_models(DEFAULT_REVIEW_MODELS),
                 prompt_fixer_model=DEFAULT_PROMPT_FIXER_MODEL,
@@ -1886,18 +1999,30 @@ def create_magic_book(title: str, story: str, overnight_mode: bool) -> dict[str,
     }
 
 
-def get_spread(spread_id: str) -> dict[str, object] | None:
-    return next((spread for spread in load_spreads() if spread["spread_id"] == spread_id), None)
+def get_spread(spread_id: str, project_id: str | None = None) -> dict[str, object] | None:
+    resolved_project_id = resolve_project_id(project_id)
+    spreads = load_spreads()
+    return next(
+        (
+            spread
+            for spread in spreads
+            if spread["spread_id"] == spread_id and str(spread.get("project_id", resolved_project_id)) == resolved_project_id
+        ),
+        None,
+    )
 
 
-def patch_spread(spread_id: str, updates: dict[str, object]) -> dict[str, object]:
+def patch_spread(spread_id: str, updates: dict[str, object], project_id: str | None = None) -> dict[str, object]:
+    resolved_project_id = resolve_project_id(project_id or str(updates.get("project_id", "")))
     spreads = load_spreads()
     assets = load_assets()
     for idx, spread in enumerate(spreads):
-        if spread["spread_id"] != spread_id:
+        spread_project_id = str(spread.get("project_id", resolved_project_id))
+        if spread["spread_id"] != spread_id or spread_project_id != resolved_project_id:
             continue
         merged = {**spread}
         normalized_updates = dict(updates)
+        normalized_updates.pop("project_id", None)
         if "visual_focus" in normalized_updates:
             visual_focus = normalized_updates.get("visual_focus")
             if isinstance(visual_focus, str):
@@ -1921,9 +2046,18 @@ def patch_spread(spread_id: str, updates: dict[str, object]) -> dict[str, object
         merged.update(
             {k: v for k, v in normalized_updates.items() if k not in {"text_overlay", "generation_overrides"}}
         )
+        merged["project_id"] = spread_project_id
         assigned = merged.get("assigned_image_id")
         if assigned:
-            asset = next((item for item in assets if item["asset_id"] == assigned), None)
+            asset = next(
+                (
+                    item
+                    for item in assets
+                    if item["asset_id"] == assigned
+                    and str(item.get("project_id", spread_project_id)) == spread_project_id
+                ),
+                None,
+            )
             if asset:
                 merged["assigned_image_preview"] = asset.get("mirror_url", "")
         else:
@@ -1931,7 +2065,7 @@ def patch_spread(spread_id: str, updates: dict[str, object]) -> dict[str, object
         spreads[idx] = merged
         save_spreads(spreads)
         return merged
-    raise ValueError(f"Spread {spread_id} not found")
+    raise ValueError(f"Spread {spread_id} not found for project {resolved_project_id}")
 
 
 def add_asset(asset: dict[str, object]) -> dict[str, object]:
@@ -1942,12 +2076,18 @@ def add_asset(asset: dict[str, object]) -> dict[str, object]:
     return asset
 
 
-def assign_asset_to_spread(spread_id: str, asset_id: str) -> tuple[dict[str, object], dict[str, object]]:
-    updated_spread = patch_spread(spread_id, {"assigned_image_id": asset_id})
+def assign_asset_to_spread(
+    spread_id: str,
+    asset_id: str,
+    project_id: str | None = None,
+) -> tuple[dict[str, object], dict[str, object]]:
+    resolved_project_id = resolve_project_id(project_id)
+    updated_spread = patch_spread(spread_id, {"assigned_image_id": asset_id}, project_id=resolved_project_id)
     assets = load_assets()
     for asset in assets:
         spreads = set(asset.get("spread_ids") or [])
-        if asset["asset_id"] == asset_id:
+        asset_project_id = str(asset.get("project_id", resolved_project_id))
+        if asset["asset_id"] == asset_id and asset_project_id == resolved_project_id:
             spreads.add(spread_id)
         else:
             spreads.discard(spread_id)
@@ -1964,6 +2104,7 @@ def register_asset_from_run(
     assign_to_spread: bool = True,
 ) -> dict[str, object]:
     spread_id = metadata.get("spread_id")
+    project_id = resolve_project_id(str(metadata.get("project_id", "")))
     if not spread_id or not image_entries:
         return
     image_info = image_entries[0]
@@ -1984,10 +2125,11 @@ def register_asset_from_run(
         "attempt": metadata.get("attempt"),
         "failures": metadata.get("failures"),
         "timestamp": metadata.get("timestamp", ""),
+        "project_id": project_id,
     }
     add_asset(asset)
     if assign_to_spread:
-        patch_spread(spread_id, {"assigned_image_id": asset_id})
+        patch_spread(str(spread_id), {"assigned_image_id": asset_id}, project_id=project_id)
     return asset
 
 
@@ -2088,6 +2230,38 @@ def set_current_workflow_process(proc: subprocess.Popen[str] | None) -> None:
         CURRENT_WORKFLOW_PROC = proc
 
 
+def extract_generation_pass(text: str) -> tuple[int, int] | None:
+    matches = re.findall(r"Generating\s+\d+%\s+.*?(\d+)/(\d+)", text)
+    if not matches:
+        return None
+    current_text, total_text = matches[-1]
+    return int(current_text), int(total_text)
+
+
+def stream_process_output(
+    stream: Any,
+    target_path: Path,
+    state_updater: Callable[[str], None] | None = None,
+) -> tuple[threading.Thread, list[str]]:
+    chunks: list[str] = []
+
+    def worker() -> None:
+        with target_path.open("w", encoding="utf-8") as fh:
+            while True:
+                chunk = stream.read(1)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                fh.write(chunk)
+                fh.flush()
+                if state_updater:
+                    state_updater("".join(chunks[-2000:]))
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    return thread, chunks
+
+
 def render_options(options: list[str], selected: str) -> str:
     rendered = []
     for option in options:
@@ -2153,6 +2327,7 @@ def build_review_metadata(run_dir: Path, prompt_text: str, settings: dict[str, s
     return {
         "slug": run_dir.name,
         "unit_slug": run_dir.name,
+        "project_id": settings.get("project_id", resolve_project_id()),
         "model": settings.get("model", MODEL),
         "width": settings.get("width", ""),
         "height": settings.get("height", ""),
@@ -2598,6 +2773,7 @@ def render_recent_page() -> str:
 
 
 def generate_image(form: dict[str, str]) -> str:
+    project_id = resolve_project_id(form.get("project_id", ""))
     prompt = form.get("prompt", "").strip()
     steps = form.get("steps", DEFAULT_STEPS).strip() or DEFAULT_STEPS
     size = form.get("size", DEFAULT_SIZE).strip() or DEFAULT_SIZE
@@ -2622,7 +2798,7 @@ def generate_image(form: dict[str, str]) -> str:
     reference_notes = form.get("reference_notes", "").strip()
     reference_images: list[dict[str, object]] = []
     if spread_id:
-        spread = get_spread(spread_id) or {}
+        spread = get_spread(spread_id, project_id=project_id) or {}
         if not reference_notes:
             reference_notes = str(spread.get("reference_notes", "")).strip()
         raw_refs = spread.get("reference_images", [])
@@ -2639,12 +2815,15 @@ def generate_image(form: dict[str, str]) -> str:
         return "Review models should be a comma-separated list."
     if get_state()["running"]:
         return "Generation already in progress."
+    healthy, health_detail = check_model_runtime_health(MODEL)
+    if not healthy:
+        return f"Generator model check failed: {health_detail}"
     clear_abort_flag()
 
     width, height = size.split("x", 1)
-    effective_prompt = prompt
+    effective_prompt = compact_image_prompt(prompt)
     if reference_notes:
-        effective_prompt = f"{prompt}\n\nReference cues to honor:\n{reference_notes}"
+        effective_prompt = f"{effective_prompt}\n\nReference cues to honor:\n{reference_notes}"
     recursive_config = {
         "judge_model": judge_model,
         "judge_threshold": judge_threshold,
@@ -2661,6 +2840,11 @@ def generate_image(form: dict[str, str]) -> str:
         last_review=None,
         last_review_path="",
         last_adjusted_prompt="",
+        attempt_started_at="",
+        attempt_timeout_seconds=IMAGE_GENERATION_TIMEOUT_SECONDS,
+        generator_label=MODEL,
+        generation_pass_current=None,
+        generation_pass_total=None,
     )
     threading.Thread(
         target=run_generation,
@@ -2676,6 +2860,7 @@ def generate_image(form: dict[str, str]) -> str:
             reference_notes,
             reference_images,
             recursive_config,
+            project_id,
             review_project,
             review_models,
             prompt_fixer_model,
@@ -2697,6 +2882,7 @@ def run_generation(
     reference_notes: str,
     reference_images: list[dict[str, object]],
     recursive_config: dict[str, object],
+    project_id: str,
     review_project: str,
     review_models: list[str],
     prompt_fixer_model: str,
@@ -2711,6 +2897,9 @@ def run_generation(
                 running=False,
                 status="Generation aborted.",
                 last_error="Aborted by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         attempt += 1
@@ -2723,6 +2912,7 @@ def run_generation(
         (run_dir / "negative_prompt.txt").write_text(negative + "\n", encoding="utf-8")
         settings = {
             "model": MODEL,
+            "project_id": project_id,
             "width": width,
             "height": height,
             "steps": steps,
@@ -2747,6 +2937,7 @@ def run_generation(
             "review_models": review_models,
             "prompt_fixer_model": prompt_fixer_model,
             "images": [],
+            "project_id": project_id,
             "spread_id": spread_id,
             "prompt": prompt,
             "effective_prompt": effective_prompt,
@@ -2765,6 +2956,11 @@ def run_generation(
             last_review=None,
             last_review_path="",
             last_adjusted_prompt="",
+            attempt_started_at=datetime.now().isoformat(),
+            attempt_timeout_seconds=IMAGE_GENERATION_TIMEOUT_SECONDS,
+            generator_label=MODEL,
+            generation_pass_current=None,
+            generation_pass_total=None,
         )
         try:
             cmd = [OLLAMA_BIN, "run", MODEL, effective_prompt, "--width", width, "--height", height, "--steps", steps]
@@ -2781,7 +2977,60 @@ def run_generation(
                 start_new_session=True,
             )
             set_current_workflow_process(proc)
+            stdout_path = run_dir / "ollama.stdout.log"
+            stderr_path = run_dir / "ollama.stderr.log"
+
+            def update_progress_from_stderr(recent_text: str) -> None:
+                progress = extract_generation_pass(recent_text)
+                if not progress:
+                    return
+                current_pass, total_passes = progress
+                state = get_state()
+                if (
+                    state.get("generation_pass_current") == current_pass
+                    and state.get("generation_pass_total") == total_passes
+                ):
+                    return
+                set_state(
+                    status=f"Attempt {attempt}: generating {run_dir.name} pass {current_pass}/{total_passes}",
+                    generation_pass_current=current_pass,
+                    generation_pass_total=total_passes,
+                )
+
+            stdout_thread, stdout_chunks = stream_process_output(proc.stdout, stdout_path)
+            stderr_thread, stderr_chunks = stream_process_output(proc.stderr, stderr_path, update_progress_from_stderr)
+            start_time = time.monotonic()
             while proc.poll() is None:
+                elapsed = time.monotonic() - start_time
+                if elapsed > IMAGE_GENERATION_TIMEOUT_SECONDS:
+                    try:
+                        os.killpg(proc.pid, signal.SIGTERM)
+                    except OSError:
+                        try:
+                            proc.terminate()
+                        except OSError:
+                            pass
+                    proc.wait(timeout=5)
+                    stdout_thread.join(timeout=5)
+                    stderr_thread.join(timeout=5)
+                    stdout = "".join(stdout_chunks)
+                    stderr = "".join(stderr_chunks)
+                    set_current_workflow_process(None)
+                    error_text = (
+                        f"Generation timed out after {IMAGE_GENERATION_TIMEOUT_SECONDS}s before any image file was written. "
+                        "The local image model may be stalled."
+                    )
+                    set_state(
+                        running=False,
+                        status=error_text,
+                        last_run_dir=str(run_dir),
+                        last_images=list_image_files(run_dir),
+                        last_error=error_text,
+                        attempt_started_at="",
+                        generation_pass_current=None,
+                        generation_pass_total=None,
+                    )
+                    return
                 if abort_requested():
                     try:
                         os.killpg(proc.pid, signal.SIGTERM)
@@ -2792,10 +3041,12 @@ def run_generation(
                             pass
                     break
                 time.sleep(0.25)
-            stdout, stderr = proc.communicate()
+            proc.wait()
+            stdout_thread.join(timeout=5)
+            stderr_thread.join(timeout=5)
+            stdout = "".join(stdout_chunks)
+            stderr = "".join(stderr_chunks)
             set_current_workflow_process(None)
-            (run_dir / "ollama.stdout.log").write_text(stdout or "", encoding="utf-8")
-            (run_dir / "ollama.stderr.log").write_text(stderr or "", encoding="utf-8")
             if abort_requested():
                 set_state(
                     running=False,
@@ -2803,6 +3054,9 @@ def run_generation(
                     last_run_dir=str(run_dir),
                     last_images=list_image_files(run_dir),
                     last_error="Aborted by user.",
+                    attempt_started_at="",
+                    generation_pass_current=None,
+                    generation_pass_total=None,
                 )
                 return
             image_files = list_image_files(run_dir)
@@ -2831,6 +3085,9 @@ def run_generation(
                             last_run_dir=str(run_dir),
                             last_images=image_files,
                             last_error="Aborted by user.",
+                            attempt_started_at="",
+                            generation_pass_current=None,
+                            generation_pass_total=None,
                         )
                         return
                     aggregate = perform_review(run_dir)
@@ -2842,6 +3099,9 @@ def run_generation(
                         last_run_dir=str(run_dir),
                         last_images=image_files,
                         last_error=str(exc),
+                        attempt_started_at="",
+                        generation_pass_current=None,
+                        generation_pass_total=None,
                     )
                     return
                 metadata["review_status"] = aggregate.get("review_status")
@@ -2860,19 +3120,31 @@ def run_generation(
                     last_adjusted_prompt=(run_dir / "adjusted_prompt.txt").read_text(encoding="utf-8").strip()
                     if (run_dir / "adjusted_prompt.txt").exists()
                     else "",
+                    attempt_started_at="" if assign_final else datetime.now().isoformat(),
+                    generation_pass_current=None,
+                    generation_pass_total=None,
                 )
                 if assign_final:
                     break
                 failures += 1
                 continue
-            stderr_lines = (stderr or "").strip().splitlines()
-            error_text = stderr_lines[-1] if stderr_lines else "Unknown error"
+            clean_stderr = strip_ansi(stderr or "")
+            stderr_lines = [line.strip() for line in clean_stderr.splitlines() if line.strip()]
+            if image_files:
+                error_text = "Generation exited unexpectedly after writing image files."
+            elif any("Generating 100%" in line for line in stderr_lines):
+                error_text = "Generation reached 100% but no image file was written."
+            else:
+                error_text = stderr_lines[-1] if stderr_lines else "Unknown error"
             set_state(
                 running=False,
                 status=f"Generation failed: {error_text}",
                 last_run_dir=str(run_dir),
                 last_images=image_files,
                 last_error=error_text,
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         except Exception as exc:
@@ -2884,6 +3156,9 @@ def run_generation(
                 last_run_dir=str(run_dir),
                 last_images=[],
                 last_error=str(exc),
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
 
@@ -2895,7 +3170,16 @@ def start_review(run_name: str) -> str:
     run_dir = PROMPTS_DIR / run_name
     if not run_dir.exists():
         return f"Run {run_name} was not found."
-    set_state(running=True, status=f"Reviewing {run_name}...", last_run_dir=str(run_dir), last_images=list_image_files(run_dir), last_error="")
+    set_state(
+        running=True,
+        status=f"Reviewing {run_name}...",
+        last_run_dir=str(run_dir),
+        last_images=list_image_files(run_dir),
+        last_error="",
+        attempt_started_at="",
+        generation_pass_current=None,
+        generation_pass_total=None,
+    )
     threading.Thread(target=run_review, args=(run_dir,), daemon=True).start()
     return f"Started review for {html.escape(run_name)}."
 
@@ -2909,6 +3193,9 @@ def run_review(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         aggregate = perform_review(run_dir)
@@ -2924,6 +3211,9 @@ def run_review(run_dir: Path) -> None:
             last_review=aggregate,
             last_review_path=str(run_dir / "review.scorecard.md"),
             last_adjusted_prompt=adjusted_prompt,
+            attempt_started_at="",
+            generation_pass_current=None,
+            generation_pass_total=None,
         )
     except Exception as exc:
         if abort_requested() or str(exc) == "Aborted by user.":
@@ -2933,6 +3223,9 @@ def run_review(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         (run_dir / "review.error.log").write_text(f"{type(exc).__name__}: {exc}\n", encoding="utf-8")
@@ -2942,6 +3235,9 @@ def run_review(run_dir: Path) -> None:
             last_run_dir=str(run_dir),
             last_images=list_image_files(run_dir),
             last_error=str(exc),
+            attempt_started_at="",
+            generation_pass_current=None,
+            generation_pass_total=None,
         )
 
 
@@ -2954,7 +3250,16 @@ def start_adjust(run_name: str) -> str:
         return f"Run {run_name} was not found."
     if not (run_dir / "review.scorecard.json").exists():
         return "Run review first so the prompt fixer has scorecard input."
-    set_state(running=True, status=f"Adjusting prompt for {run_name}...", last_run_dir=str(run_dir), last_images=list_image_files(run_dir), last_error="")
+    set_state(
+        running=True,
+        status=f"Adjusting prompt for {run_name}...",
+        last_run_dir=str(run_dir),
+        last_images=list_image_files(run_dir),
+        last_error="",
+        attempt_started_at="",
+        generation_pass_current=None,
+        generation_pass_total=None,
+    )
     threading.Thread(target=run_adjust_prompt, args=(run_dir,), daemon=True).start()
     return f"Started prompt adjustment for {html.escape(run_name)}."
 
@@ -2968,6 +3273,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         module = load_review_module()
@@ -2984,6 +3292,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         adjusted = module.adjust_prompt(fixer_model, prompt_text, aggregate, verdicts).strip()
@@ -2994,6 +3305,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         (run_dir / "adjusted_prompt.txt").write_text(adjusted + "\n", encoding="utf-8")
@@ -3006,6 +3320,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
             last_review=aggregate,
             last_review_path=str(run_dir / "review.scorecard.md"),
             last_adjusted_prompt=adjusted,
+            attempt_started_at="",
+            generation_pass_current=None,
+            generation_pass_total=None,
         )
     except Exception as exc:
         if abort_requested() or str(exc) == "Aborted by user.":
@@ -3015,6 +3332,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
                 last_run_dir=str(run_dir),
                 last_images=list_image_files(run_dir),
                 last_error="Killed by user.",
+                attempt_started_at="",
+                generation_pass_current=None,
+                generation_pass_total=None,
             )
             return
         (run_dir / "adjust.error.log").write_text(f"{type(exc).__name__}: {exc}\n", encoding="utf-8")
@@ -3024,6 +3344,9 @@ def run_adjust_prompt(run_dir: Path) -> None:
             last_run_dir=str(run_dir),
             last_images=list_image_files(run_dir),
             last_error=str(exc),
+            attempt_started_at="",
+            generation_pass_current=None,
+            generation_pass_total=None,
         )
 
 
@@ -3159,6 +3482,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
+    def do_PATCH(self) -> None:
+        parsed = urlparse(self.path)
+        clean_path = parsed.path.split("?", 1)[0]
+        if not clean_path.startswith("/api/"):
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length).decode("utf-8", errors="replace")
+        content_type = self.headers.get("Content-Type", "")
+        if "application/json" in content_type:
+            data = json.loads(raw or "{}")
+        else:
+            data = {k: v[0] for k, v in parse_qs(raw, keep_blank_values=True).items()}
+        self.handle_api_post(clean_path, data, None)
+
     def serve_file(self, path: Path) -> None:
         if not path.exists():
             self.send_error(HTTPStatus.NOT_FOUND)
@@ -3217,7 +3555,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_json({"items": list_reference_inbox()})
             return
         if path == "/api/spreads":
-            self.send_json(load_spreads())
+            current_project_id = resolve_project_id(query.get("project_id", [""])[0].strip())
+            items = [
+                item
+                for item in load_spreads()
+                if str(item.get("project_id", current_project_id)) == current_project_id
+            ]
+            self.send_json(items)
             return
         if path == "/api/assets":
             items, _ = self.filter_assets(query)
@@ -3284,13 +3628,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/spreads" and data:
             spread_id = data.get("spread_id")
             if spread_id:
-                updated = patch_spread(spread_id, data)
+                updated = patch_spread(str(spread_id), data, project_id=str(data.get("project_id", "")))
                 self.send_json(updated)
                 return
         if path.startswith("/api/spreads/"):
             spread_id = path.split("/api/spreads/", 1)[1]
             try:
-                updated = patch_spread(spread_id, data or {})
+                updated = patch_spread(spread_id, data or {}, project_id=str((data or {}).get("project_id", "")))
                 self.send_json(updated)
             except ValueError as exc:
                 self.send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -3319,6 +3663,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/assets" and data:
             asset_id = data.get("asset_id") or f"asset-{int(datetime.now().timestamp())}"
+            project_id = resolve_project_id(str(data.get("project_id", "")))
             asset = {
                 "asset_id": asset_id,
                 "label": data.get("label", "Custom asset"),
@@ -3326,6 +3671,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "mirror_url": data.get("mirror_url", ""),
                 "spread_ids": data.get("spread_ids", []),
                 "timestamp": datetime.now().isoformat(),
+                "project_id": project_id,
             }
             add_asset(asset)
             self.send_json(asset)
@@ -3348,6 +3694,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             shutil.copyfileobj(file_field.file, fh)
         asset_id = f"upload-{timestamp}"
         spread_id = form.getvalue("spread_id", "").strip()
+        project_id = resolve_project_id(form.getvalue("project_id", "").strip())
         asset = {
             "asset_id": asset_id,
             "label": form.getvalue("label", filename),
@@ -3355,10 +3702,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "mirror_url": f"/uploads/{dest.name}",
             "spread_ids": [spread_id] if spread_id else [],
             "timestamp": datetime.now().isoformat(),
+            "project_id": project_id,
         }
         add_asset(asset)
         if spread_id:
-            patch_spread(spread_id, {"assigned_image_id": asset_id})
+            patch_spread(spread_id, {"assigned_image_id": asset_id}, project_id=project_id)
         self.send_json(asset)
 
     def handle_manuscript_upload(self, form: cgi.FieldStorage) -> None:
@@ -3453,6 +3801,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def filter_assets(self, query: dict[str, list[str]]) -> tuple[list[dict[str, object]], int]:
         items = load_assets()
+        project_filter = resolve_project_id(query.get("project_id", [""])[0].strip())
+        items = [item for item in items if str(item.get("project_id", project_filter)) == project_filter]
         spread_filters = query.get("spread", [])
         source_filters = query.get("source", [])
         search_filters = query.get("search", [])
