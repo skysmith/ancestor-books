@@ -16,8 +16,18 @@
         <button class="tab active" data-tab="layout">Layout</button>
         <button class="tab secondary" data-tab="generate">Generate</button>
         <button class="tab secondary" data-tab="assets">Assets</button>
+        <button class="tab secondary" data-tab="manuscript">Manuscript</button>
       </div>
-      <div class="status-chip">Project: Night of Courage</div>
+      <div class="project-picker">
+        <label for="projectSelect" class="project-picker-label">Project</label>
+        <select id="projectSelect" class="project-select-native" aria-hidden="true" tabindex="-1"></select>
+        <div class="project-select-shell" id="projectSelectShell">
+          <button class="flat-select project-select" id="projectSelectButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="projectSelectLabel">Choose project</span>
+          </button>
+          <div class="project-select-menu hidden" id="projectSelectMenu" role="listbox" aria-label="Project picker"></div>
+        </div>
+      </div>
     </header>
 
     <main class="app-shell">
@@ -28,7 +38,6 @@
               <h2>Storyboard</h2>
               <p class="muted">Each tile is a spread with status, prompt, and preview.</p>
             </div>
-            <button class="ghost-btn" id="zoomReset">Reset zoom</button>
           </div>
           <div class="layout-grid" id="spreadGrid" aria-live="polite"></div>
         </section>
@@ -44,15 +53,14 @@
               <div class="preview-overlay" id="previewOverlay">Text overlay</div>
               <div class="preview-drop-target" id="dropTarget">
                 <p>Drag &amp; drop art here</p>
-                <p class="muted">Files dropped here upload straight to the selected spread.</p>
+                <p class="muted" id="dropTargetCopy">Files dropped here upload straight to the selected spread.</p>
                 <p>or use the actions below</p>
               </div>
             </div>
             <div class="tile-actions">
               <button class="ghost-btn" id="uploadBtn" type="button">Upload art</button>
-              <button class="ghost-btn" id="launchGeneratorBtn" type="button">Launch generator</button>
-              <button class="ghost-btn" id="chooseAssetBtn" type="button">Choose existing</button>
-              <button class="ghost-btn" id="clearAssignmentBtn" type="button">Clear assignment</button>
+              <button class="primary-btn" id="launchGeneratorBtn" type="button">Launch generator</button>
+              <button class="ghost-btn" id="clearAssignmentBtn" type="button">Remove art</button>
             </div>
             <div class="placement-row">
               <label><input type="radio" name="placement" value="left" /> Left page</label>
@@ -66,114 +74,182 @@
             </div>
           </div>
 
-          <section class="drawer-panel">
-            <div class="drawer-panel-header">
-              <h4>Prompt + settings</h4>
-              <span class="muted" id="lastUpdated">Last saved just now</span>
-            </div>
-            <label>
-              Prompt
-              <textarea id="promptField" rows="3"></textarea>
-            </label>
-            <label>
-              Negative prompt
-              <textarea id="negativeField" rows="2"></textarea>
-            </label>
-            <label>
-              Seed
-              <input type="number" id="seedField" min="0" step="1" />
-            </label>
-          </section>
-
-          <section class="drawer-panel">
-            <div class="drawer-panel-header">
-              <h4>Text overlay</h4>
-              <div class="drawer-panel-actions">
-                <button class="ghost-btn" id="snapOverlayBtn" type="button">Snap to safe margin</button>
-              </div>
-              <label class="inline">
-                <input type="checkbox" id="overlayVisible" />
-                Visible
+          <section class="drawer-panel" data-panel-id="prompt-settings">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="true">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Prompt + settings</h4>
+                  <span class="muted drawer-panel-meta" id="lastUpdated">Last saved just now</span>
+                </span>
+                <span class="muted drawer-panel-explainer">Tune the prompt, cleanup rules, and seed for this spread.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <label>
+                Prompt
+                <textarea id="promptField" rows="3"></textarea>
+              </label>
+              <label>
+                Negative prompt
+                <textarea id="negativeField" rows="2"></textarea>
+              </label>
+              <label>
+                Seed
+                <input type="number" id="seedField" min="0" step="1" />
               </label>
             </div>
-            <label>
-              X offset (%)
-              <input type="range" id="overlayX" min="0" max="80" />
-            </label>
-            <label>
-              Y offset (%)
-              <input type="range" id="overlayY" min="0" max="80" />
-            </label>
-            <label>
-              Width (%)
-              <input type="range" id="overlayWidth" min="30" max="100" />
-            </label>
-            <label>
-              Alignment
-              <select id="overlayAlignment">
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </label>
-           <label>
-             Wash opacity
-             <input type="range" id="overlayWash" min="0" max="1" step="0.05" />
-           </label>
-         </section>
+          </section>
 
-          <section class="drawer-panel judge-overrides">
-            <div class="drawer-panel-header">
-              <h4>Judge overrides</h4>
-              <button class="ghost-btn" id="clearJudgeOverridesBtn" type="button">Reset to defaults</button>
+          <section class="drawer-panel" data-panel-id="text-overlay">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="true">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Text overlay</h4>
+                </span>
+                <span class="muted drawer-panel-explainer">Place the story text where it will stay readable and print-safe.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <div class="drawer-panel-actions">
+                <button class="ghost-btn" id="snapOverlayBtn" type="button">Snap to safe margin</button>
+                <label class="inline">
+                  <input type="checkbox" id="overlayVisible" />
+                  Visible
+                </label>
+              </div>
+              <label>
+                X offset (%)
+                <input type="range" id="overlayX" min="0" max="80" />
+              </label>
+              <label>
+                Y offset (%)
+                <input type="range" id="overlayY" min="0" max="80" />
+              </label>
+              <label>
+                Width (%)
+                <input type="range" id="overlayWidth" min="30" max="100" />
+              </label>
+              <label>
+                Alignment
+                <select id="overlayAlignment">
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+              <label>
+                Wash opacity
+                <input type="range" id="overlayWash" min="0" max="1" step="0.05" />
+              </label>
             </div>
-            <label>
-              Judge model
-              <input type="text" id="drawerJudgeModel" />
-            </label>
-            <label>
-              Threshold
-              <input type="number" id="drawerJudgeThreshold" min="0" max="1" step="0.01" />
-            </label>
-            <label>
-              Max fails
-              <input type="number" id="drawerMaxFails" min="0" step="1" />
-            </label>
-            <label>
-              Prompt strategy
-              <select id="drawerPromptStrategy">
-                <option value="suggestive">Suggest fixes</option>
-                <option value="static">Keep prompt</option>
-              </select>
-            </label>
-            <label class="inline">
-              <input type="checkbox" id="drawerAllowUpdates" />
-              Allow prompt updates
-            </label>
           </section>
 
-          <section class="drawer-panel">
-            <h4>Notes &amp; status</h4>
-            <label>
-              Notes
-              <textarea id="notesField" rows="3"></textarea>
-            </label>
-            <label>
-              Status
-              <select id="statusSelect">
-                <option value="draft">Draft</option>
-                <option value="needs-work">Needs work</option>
-                <option value="approved">Approved</option>
-                <option value="missing">Missing</option>
-              </select>
-            </label>
+          <section class="drawer-panel judge-overrides" data-panel-id="judge-overrides">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="false">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Judge overrides</h4>
+                </span>
+                <span class="muted drawer-panel-explainer">Override the loop settings for just this spread when you need a custom run.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <div class="drawer-panel-actions">
+                <button class="ghost-btn" id="clearJudgeOverridesBtn" type="button">Reset to defaults</button>
+              </div>
+              <label>
+                Judge model
+                <select id="drawerJudgeModel" class="flat-select"></select>
+              </label>
+              <label>
+                Critic strictness
+                <select id="drawerJudgeThreshold" class="flat-select"></select>
+                <span class="field-help judge-scale-help" id="drawerJudgeThresholdHelp">3. Balanced: a solid quality gate for normal runs.</span>
+              </label>
+              <label>
+                Max fails
+                <input type="number" id="drawerMaxFails" min="0" step="1" />
+              </label>
+              <label>
+                Prompt strategy
+                <select id="drawerPromptStrategy">
+                  <option value="suggestive">Suggest fixes</option>
+                  <option value="static">Keep prompt</option>
+                </select>
+              </label>
+              <label class="inline">
+                <input type="checkbox" id="drawerAllowUpdates" />
+                Allow prompt updates
+              </label>
+            </div>
           </section>
 
-          <section class="drawer-panel asset-chooser">
-            <h4>Assets</h4>
-            <div class="asset-controls">
-              <select id="assetSelect"></select>
-              <button class="ghost-btn" id="assignAssetBtn">Assign</button>
+          <section class="drawer-panel" data-panel-id="notes-status">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="true">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Notes &amp; status</h4>
+                </span>
+                <span class="muted drawer-panel-explainer">Keep a short review note and mark whether the spread is draft, approved, or needs work.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <label>
+                Notes
+                <textarea id="notesField" rows="3"></textarea>
+              </label>
+              <label>
+                Status
+                <select id="statusSelect">
+                  <option value="draft">Draft</option>
+                  <option value="needs-work">Needs work</option>
+                  <option value="approved">Approved</option>
+                  <option value="missing">Missing</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="drawer-panel" data-panel-id="reference-cues">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="true">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Reference cues</h4>
+                </span>
+                <span class="muted drawer-panel-explainer">Attach style, face direction, or pose references to steer the next generation.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <label>
+                Reference notes
+                <textarea id="referenceNotesField" rows="3" placeholder="Example: Keep Daniel in left-facing three-quarter profile. Match the seated posture and quiet winter mood."></textarea>
+              </label>
+              <div class="reference-strip" id="spreadReferences"></div>
+              <div class="reference-inbox" id="referenceInbox"></div>
+            </div>
+          </section>
+
+          <section class="drawer-panel asset-chooser" data-panel-id="assets">
+            <button class="drawer-panel-toggle" type="button" aria-expanded="false">
+              <span class="drawer-panel-toggle-copy">
+                <span class="drawer-panel-title-row">
+                  <h4>Assets</h4>
+                </span>
+                <span class="muted drawer-panel-explainer">Pick an already-uploaded or generated image and assign it to this spread.</span>
+              </span>
+              <span class="drawer-panel-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="drawer-panel-body">
+              <p class="muted">Use this if you want to reuse art that is already in the library.</p>
+              <div class="asset-controls">
+                <select id="assetSelect"></select>
+                <button class="ghost-btn" id="assignAssetBtn">Assign</button>
+              </div>
             </div>
           </section>
         </aside>
@@ -183,65 +259,126 @@
         <section class="generate-panel">
           <header class="panel-header">
             <div>
+              <p class="panel-kicker">Generation studio</p>
               <h2>Generate art</h2>
-              <p class="muted">Runs the local generator with recursive judge checks.</p>
+              <p class="muted">Run the active spread through the local image loop, then score and retry until it clears your review settings.</p>
             </div>
             <button class="ghost-btn" id="generateReset">Reset form</button>
           </header>
           <div class="generate-grid">
-            <div class="generate-form">
-              <label>
-                Select spread
-                <select id="generateSpreadSelect"></select>
-              </label>
-              <label>
-                Prompt
-                <textarea id="generatePrompt" rows="3"></textarea>
-              </label>
-              <label>
-                Negative prompt
-                <textarea id="generateNegative" rows="2"></textarea>
-              </label>
-              <label>
-                Seed
-                <input type="number" id="generateSeed" min="0" step="1" />
-              </label>
+            <div class="generate-form-card">
+              <div class="generate-card-header">
+                <div>
+                  <p class="generate-card-eyebrow">Spread input</p>
+                  <h3>Prompt and run setup</h3>
+                </div>
+                <p class="generate-card-note">The selected spread stays in sync with the Layout tab.</p>
+              </div>
+              <div class="generate-form">
+                <label>
+                  <span class="field-label">Select spread</span>
+                  <select id="generateSpreadSelect" class="flat-select"></select>
+                </label>
+                <label>
+                  <span class="field-label">Prompt</span>
+                  <textarea id="generatePrompt" rows="7"></textarea>
+                </label>
+                <div class="generate-secondary-fields">
+                  <label>
+                    <span class="field-label">Negative prompt</span>
+                    <textarea id="generateNegative" rows="4"></textarea>
+                  </label>
+                  <label class="seed-field">
+                    <span class="field-label">Seed</span>
+                    <input type="number" id="generateSeed" min="0" step="1" />
+                    <span class="field-help">Reuse a seed to get a similar composition again. Leave it blank for a fresh roll.</span>
+                  </label>
+                </div>
+              </div>
             </div>
-            <div class="generate-settings">
-              <h4>Recursive judge settings</h4>
-              <label>
-                Judge model
-                <input type="text" id="judgeModel" />
-              </label>
-              <label>
-                Threshold
-                <input type="number" id="judgeThreshold" min="0" max="1" step="0.01" />
-              </label>
-              <label>
-                Max fails
-                <input type="number" id="maxFails" min="0" step="1" />
-              </label>
-              <label>
-                Adjustment strategy
-                <select id="promptStrategy">
-                  <option value="suggestive">Suggest fixes</option>
-                  <option value="static">Keep prompt</option>
-                </select>
-              </label>
-              <label>
-                Allow prompt updates
-                <input type="checkbox" id="allowUpdates" />
-              </label>
+            <div class="generate-settings-card">
+              <div class="generate-card-header">
+                <div>
+                  <p class="generate-card-eyebrow">Review loop</p>
+                  <h3>Recursive judge settings</h3>
+                </div>
+                <p class="generate-card-note">Tune how strict the critic is before a run gets accepted.</p>
+              </div>
+              <div class="generate-settings">
+                <label>
+                  <span class="field-label">Judge model</span>
+                  <select id="judgeModel" class="flat-select"></select>
+                  <span class="field-help">Pick the vision model that scores each image before the loop decides to keep or retry it.</span>
+                </label>
+                <div class="generate-settings-grid">
+                  <label>
+                    <span class="field-label">Critic strictness</span>
+                    <select id="judgeThreshold" class="flat-select"></select>
+                    <span class="field-help judge-scale-help" id="judgeThresholdHelp">3. Balanced: a solid quality gate for normal runs.</span>
+                  </label>
+                  <label>
+                    <span class="field-label">Max fails</span>
+                    <input type="number" id="maxFails" min="0" step="1" />
+                    <span class="field-help">Sets how many retries the loop gets before it stops.</span>
+                  </label>
+                </div>
+                <label>
+                  <span class="field-label">Adjustment strategy</span>
+                  <select id="promptStrategy">
+                    <option value="suggestive">Suggest fixes</option>
+                    <option value="static">Keep prompt</option>
+                  </select>
+                  <span class="field-help">Choose whether failed reviews can suggest prompt changes or keep the prompt fixed.</span>
+                </label>
+                <label class="checkbox-row">
+                  <input type="checkbox" id="allowUpdates" />
+                  <span>
+                    <strong>Allow prompt updates</strong>
+                    <small>Let the review loop revise the prompt between attempts.</small>
+                  </span>
+                </label>
+              </div>
+              <section class="setup-status-card" id="setupStatusCard" aria-live="polite">
+                <div class="setup-status-header">
+                  <div>
+                    <p class="generate-card-eyebrow">Local dependencies</p>
+                    <h3>Setup readiness</h3>
+                  </div>
+                  <span class="setup-status-badge" id="setupStatusBadge">Checking</span>
+                </div>
+                <p class="muted setup-status-summary" id="setupStatusSummary">Checking local models and shared paths...</p>
+                <div class="setup-status-columns">
+                  <div>
+                    <h4>Models</h4>
+                    <ul class="setup-status-list" id="setupStatusModels"></ul>
+                  </div>
+                  <div>
+                    <h4>Paths</h4>
+                    <ul class="setup-status-list" id="setupStatusPaths"></ul>
+                  </div>
+                </div>
+                <p class="setup-status-meta" id="setupStatusMeta"></p>
+              </section>
             </div>
           </div>
 
           <div class="generate-actions">
-            <button class="primary-btn" id="runGeneratorBtn">Run generator</button>
-            <p class="muted" id="generationStatus">Idle</p>
+            <button class="primary-btn generate-run-btn" id="runGeneratorBtn">Run generator</button>
+            <button class="ghost-btn" id="abortGeneratorBtn" type="button">Kill active run</button>
+            <div class="generate-status-pill">
+              <span class="generate-status-label">Status</span>
+              <p class="muted" id="generationStatus">Idle</p>
+            </div>
           </div>
 
           <div class="generate-log">
-            <h4>Run log</h4>
+            <div class="generate-card-header">
+              <div>
+                <p class="generate-card-eyebrow">Output</p>
+                <h3>Run log</h3>
+              </div>
+              <p class="generate-card-note">Live status messages appear here while the generator is running.</p>
+            </div>
             <ul id="generationLog"></ul>
           </div>
         </section>
@@ -282,6 +419,114 @@
           <div class="assets-list" id="assetsList"></div>
         </section>
       </div>
+
+      <div id="manuscriptView" class="view-panel hidden">
+        <section class="manuscript-panel">
+          <header class="panel-header">
+            <div>
+              <h2>Manuscript studio</h2>
+              <p class="muted">Read the manuscript, inspect spread prompts, and keep source material with the project.</p>
+            </div>
+          </header>
+
+          <div class="manuscript-grid">
+            <section class="manuscript-column">
+              <div class="manuscript-section-header">
+                <h3>Book text</h3>
+                <p class="muted">Live manuscript files from the selected project.</p>
+              </div>
+              <div class="manuscript-doc-tabs" id="manuscriptDocTabs"></div>
+              <article class="manuscript-doc-viewer">
+                <div class="manuscript-doc-viewer-header">
+                  <div>
+                    <h4 id="manuscriptDocTitle">Select a document</h4>
+                    <p class="muted manuscript-doc-helper" id="manuscriptDocHelper">Locked by default. Use Edit to make changes to this manuscript file.</p>
+                  </div>
+                  <div class="manuscript-doc-actions" id="manuscriptDocActions"></div>
+                </div>
+                <pre id="manuscriptDocBody"></pre>
+                <textarea id="manuscriptDocEditor" class="hidden" spellcheck="false"></textarea>
+                <p class="muted manuscript-doc-status" id="manuscriptDocStatus"></p>
+              </article>
+            </section>
+
+            <section class="manuscript-column">
+              <div class="manuscript-section-header">
+                <h3>Illustration planning</h3>
+                <p class="muted">Review each spread's story text, tune the image prompt, and open story-planning fields only when you need them.</p>
+              </div>
+              <div class="prompt-cards" id="manuscriptPromptCards"></div>
+            </section>
+
+            <section class="manuscript-column manuscript-sources">
+              <div class="manuscript-section-header">
+                <h3>Source material</h3>
+                <p class="muted">Keep PDFs, journal scans, and text docs here for later text iteration.</p>
+              </div>
+              <article class="manuscript-source-card manuscript-generation-card">
+                <div class="manuscript-source-meta">
+                  <div>
+                    <strong>Manuscript generation</strong>
+                    <p class="manuscript-generation-kicker">Turn loaded research into a polished storybook manuscript and spread plan.</p>
+                  </div>
+                  <span class="manuscript-provider-badge" id="manuscriptProviderBadge">OPENAI</span>
+                </div>
+                <div class="manuscript-generation-grid">
+                  <label class="manuscript-field">
+                    <span class="prompt-card-label">Provider</span>
+                    <select id="manuscriptProvider">
+                      <option value="openai">OpenAI</option>
+                      <option value="ollama">Local Ollama</option>
+                    </select>
+                  </label>
+                  <label class="manuscript-field">
+                    <span class="prompt-card-label">OpenAI model</span>
+                    <input type="text" id="manuscriptOpenAIModel" placeholder="gpt-5.2" />
+                  </label>
+                  <label class="manuscript-field">
+                    <span class="prompt-card-label">Local text model</span>
+                    <select id="manuscriptLocalModel"></select>
+                  </label>
+                  <label class="manuscript-toggle-card">
+                    <input type="checkbox" id="manuscriptUseEnvKey" />
+                    <span>
+                      <strong>Use environment key</strong>
+                      <small>Pull `OPENAI_API_KEY` from this machine instead of storing it here.</small>
+                    </span>
+                  </label>
+                </div>
+                <label class="manuscript-field manuscript-field-full">
+                  <span class="prompt-card-label">OpenAI API key placeholder</span>
+                  <input type="password" id="manuscriptApiKey" placeholder="Optional. Leave blank to rely on env." />
+                </label>
+                <div class="manuscript-generation-actions">
+                  <button class="ghost-btn" id="saveManuscriptConfigBtn" type="button">Save settings</button>
+                  <button class="primary-btn" id="generateManuscriptBtn" type="button">Generate manuscript</button>
+                </div>
+                <div class="manuscript-status-stack">
+                  <p class="muted manuscript-upload-status" id="manuscriptGenerationSummary">OpenAI with `gpt-5.2` is the default when credentials are available.</p>
+                  <p class="muted manuscript-upload-status" id="manuscriptGenerationStatus">Ready.</p>
+                </div>
+              </article>
+              <label class="ghost-btn manuscript-upload-btn" for="manuscriptUpload">Upload source PDF or text</label>
+              <div class="manuscript-source-entry">
+                <label>
+                  <span class="prompt-card-label">Link</span>
+                  <input type="url" id="manuscriptSourceLink" placeholder="https://example.com/source" />
+                </label>
+                <button class="ghost-btn" id="manuscriptAddLinkBtn" type="button">Save link</button>
+              </div>
+              <label class="manuscript-source-entry manuscript-source-text">
+                <span class="prompt-card-label">Pasted text</span>
+                <textarea id="manuscriptSourceText" rows="5" placeholder="Paste notes, source text, or clipped research here."></textarea>
+                <button class="ghost-btn" id="manuscriptAddTextBtn" type="button">Save text</button>
+              </label>
+              <p class="muted manuscript-upload-status" id="manuscriptUploadStatus">No new source upload yet.</p>
+              <div class="manuscript-source-list" id="manuscriptSourceList"></div>
+            </section>
+          </div>
+        </section>
+      </div>
     </main>
 
     <div class="fullscreen-overlay" id="fullscreenOverlay" aria-hidden="true">
@@ -292,22 +537,68 @@
         </div>
         <div class="fullscreen-pages">
           <div class="fullscreen-page left">
-            <p class="page-title">Left page</p>
+            <p class="page-title" id="fullscreenLeftTitle">Left page</p>
             <div class="fullscreen-preview" id="fullscreenLeft">
               <div class="fullscreen-overlay-text" id="fullscreenLeftOverlay"></div>
             </div>
           </div>
           <div class="fullscreen-page right">
-            <p class="page-title">Right page</p>
+            <p class="page-title" id="fullscreenRightTitle">Right page</p>
             <div class="fullscreen-preview" id="fullscreenRight">
               <div class="fullscreen-overlay-text" id="fullscreenRightOverlay"></div>
             </div>
           </div>
+          <div class="fullscreen-spread-overlay" id="fullscreenSpreadOverlay"></div>
         </div>
       </div>
     </div>
 
     <input type="file" id="hiddenUpload" accept="image/*" style="display:none" />
+    <input type="file" id="manuscriptUpload" accept=".pdf,.txt,.md,.doc,.docx" style="display:none" />
+
+    <div class="modal-shell hidden" id="projectModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <p class="panel-kicker">Magic Book</p>
+            <h2>Create a new project</h2>
+          </div>
+          <button class="ghost-btn" id="closeProjectModal" type="button">Close</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            <span class="field-label">Project title</span>
+            <input id="newProjectTitle" type="text" placeholder="Daniel and the Midnight River" />
+          </label>
+          <label>
+            <span class="field-label">Story seed</span>
+            <textarea id="newProjectStory" rows="10" placeholder="Describe the book idea, genre, conflict, tone, or rough premise here."></textarea>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="newProjectOvernight" checked />
+            <span>
+              <strong>Overnight mode</strong>
+              <small>Write a first-pass story from the brief, save it into Source material, break it into spreads/prompts, and start rendering automatically.</small>
+            </span>
+          </label>
+          <section class="magic-book-progress" id="magicBookProgressCard" aria-live="polite">
+            <div class="magic-book-progress-header">
+              <strong>Live progress</strong>
+              <span class="magic-book-progress-badge idle" id="magicBookProgressBadge">Idle</span>
+            </div>
+            <p class="magic-book-progress-text" id="magicBookProgressText">No Magic Book run is active yet.</p>
+            <ul class="magic-book-steps" id="magicBookSteps"></ul>
+            <p class="magic-book-progress-hint" id="magicBookProgressHint">Start a Magic Book run here and keep this modal open to watch the pipeline move through story drafting, spread planning, and rendering.</p>
+          </section>
+          <p class="muted" id="newProjectStatus">Creates a generated local project, writes a source-story draft into Manuscript Source material, and adds it to the project picker.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-btn" id="loadTinyMagicBookBtn" type="button">Load tiny test</button>
+          <button class="primary-btn" id="createProjectBtn" type="button">Start magic book</button>
+        </div>
+      </div>
+    </div>
+
     <script src="app.js" type="module"></script>
   </body>
 </html>
