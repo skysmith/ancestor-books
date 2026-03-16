@@ -1030,6 +1030,64 @@ def latest_project_render(raw_dir: Path, slug: str) -> tuple[Path | None, Path |
     return image_path, (json_path if json_path.exists() else None)
 
 
+def latest_project_render_url(project_id: str, slug: str) -> str:
+    project = get_dashboard_project(project_id)
+    if not project:
+        return ""
+    raw_dir = Path(project["path"]) / "storyboard" / "renders" / "raw"
+    fallback_png, _ = latest_project_render(raw_dir, slug)
+    if fallback_png is None:
+        return ""
+    return project_asset_url(project_id, fallback_png)
+
+
+def promote_latest_render_to_select(project_id: str, spread_id: str) -> dict[str, object]:
+    resolved_project_id = resolve_project_id(project_id)
+    project = get_dashboard_project(resolved_project_id)
+    if not project:
+        raise ValueError(f"Unknown project {resolved_project_id}")
+    project_root = Path(project["path"])
+    raw_dir = project_root / "storyboard" / "renders" / "raw"
+    selects_dir = project_root / "storyboard" / "renders" / "selects"
+    selects_dir.mkdir(parents=True, exist_ok=True)
+
+    raw_image, raw_json = latest_project_render(raw_dir, spread_id)
+    if raw_image is None:
+        raise ValueError(f"No raw render found for {spread_id}")
+
+    selected_image = selects_dir / f"{spread_id}-selected{raw_image.suffix.lower()}"
+    selected_json = selects_dir / f"{spread_id}-selected.json"
+    selected_scorecard = selects_dir / f"{spread_id}-selected.scorecard.json"
+
+    shutil.copy2(raw_image, selected_image)
+    if raw_json and raw_json.exists():
+        shutil.copy2(raw_json, selected_json)
+    else:
+        selected_json.write_text(
+            json.dumps(
+                {
+                    "slug": f"{spread_id}-selected",
+                    "unit_slug": spread_id,
+                    "source_image": str(raw_image),
+                    "created_at": datetime.now().isoformat(),
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    raw_scorecard = raw_image.with_suffix(".scorecard.json")
+    if raw_scorecard.exists():
+        shutil.copy2(raw_scorecard, selected_scorecard)
+
+    import_dashboard_project(resolved_project_id)
+    updated = get_spread(spread_id, project_id=resolved_project_id)
+    if not updated:
+        raise ValueError(f"Spread {spread_id} not found for project {resolved_project_id}")
+    return updated
+
+
 def import_dashboard_project(project_id: str) -> dict[str, object]:
     project = get_dashboard_project(project_id)
     if not project:
@@ -2060,8 +2118,10 @@ def patch_spread(spread_id: str, updates: dict[str, object], project_id: str | N
             )
             if asset:
                 merged["assigned_image_preview"] = asset.get("mirror_url", "")
+            else:
+                merged["assigned_image_preview"] = latest_project_render_url(spread_project_id, spread_id)
         else:
-            merged["assigned_image_preview"] = ""
+            merged["assigned_image_preview"] = latest_project_render_url(spread_project_id, spread_id)
         spreads[idx] = merged
         save_spreads(spreads)
         return merged
@@ -3556,11 +3616,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/spreads":
             current_project_id = resolve_project_id(query.get("project_id", [""])[0].strip())
-            items = [
-                item
-                for item in load_spreads()
-                if str(item.get("project_id", current_project_id)) == current_project_id
-            ]
+            items = []
+            for item in load_spreads():
+                if str(item.get("project_id", current_project_id)) != current_project_id:
+                    continue
+                enriched = dict(item)
+                if not str(enriched.get("assigned_image_preview", "")).strip():
+                    enriched["assigned_image_preview"] = latest_project_render_url(
+                        current_project_id,
+                        str(enriched.get("spread_id", "")),
+                    )
+                items.append(enriched)
             self.send_json(items)
             return
         if path == "/api/assets":
@@ -3633,6 +3699,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 return
         if path.startswith("/api/spreads/"):
             spread_id = path.split("/api/spreads/", 1)[1]
+            if spread_id.endswith("/approve"):
+                base_spread_id = spread_id[: -len("/approve")]
+                try:
+                    updated = promote_latest_render_to_select(
+                        str((data or {}).get("project_id", "")),
+                        base_spread_id,
+                    )
+                    self.send_json(updated)
+                except ValueError as exc:
+                    self.send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                return
             try:
                 updated = patch_spread(spread_id, data or {}, project_id=str((data or {}).get("project_id", "")))
                 self.send_json(updated)

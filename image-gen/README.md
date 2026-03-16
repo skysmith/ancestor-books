@@ -79,6 +79,19 @@ The UI centers on four tabs:
   - editing prompt, negative prompt, seed, notes, and status
   - positioning draggable text overlays in preview and full-screen modes
 
+Layout art-state labels:
+
+- `Approved` means the spread is backed by a selected render in `storyboard/renders/selects/`.
+- `Candidate` means the spread is showing the latest raw render from `storyboard/renders/raw/`, but it has not been promoted yet.
+- `Assigned` means some other asset is attached to the spread, such as an uploaded asset or a non-select project asset.
+- `Draft` means there is still no image preview for that spread.
+
+Approving a candidate:
+
+- When a spread is showing a raw fallback render, the drawer exposes `Approve candidate`.
+- That action copies the latest raw render into `storyboard/renders/selects/` as the spread's selected image, copies its metadata JSON, and copies the scorecard JSON when present.
+- After promotion, the tile should switch from `Candidate` to `Approved`.
+
 ### Generate
 
 - Always operates on the currently selected spread.
@@ -146,6 +159,11 @@ What they do:
 - `generation.json` stores default recursive generation settings.
 - `data/uploads/` holds uploaded files managed by the dashboard.
 - `data/manuscript-sources/` holds uploaded manuscript/source documents for the Manuscript tab.
+
+Project art sources:
+
+- `storyboard/renders/raw/` contains work-in-progress renders and judge artifacts.
+- `storyboard/renders/selects/` contains the currently approved per-spread renders that the layout should treat as locked selections.
 
 Related packaging files:
 

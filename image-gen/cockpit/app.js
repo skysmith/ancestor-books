@@ -5,6 +5,13 @@ const statusLabels = {
   missing: "Missing asset",
 };
 
+const artStateLabels = {
+  approved: "Approved",
+  candidate: "Candidate",
+  assigned: "Assigned",
+  draft: "Draft",
+};
+
 const fallbackPalette = {
   span: "linear-gradient(135deg, #e0f2fe, #fef3c7)",
   left: "linear-gradient(135deg, #ede9fe, #fee2e2)",
@@ -65,6 +72,7 @@ const TINY_MAGIC_BOOK_TEST = {
 
 let spreads = [];
 let assets = [];
+const imageDimensionCache = new Map();
 let generationConfig = {};
 let activeSpreadId = null;
 let statusPollTimer = null;
@@ -127,6 +135,7 @@ function cacheElements() {
     "previewOverlay",
     "dropTarget",
     "dropTargetCopy",
+    "approveCandidateBtn",
     "promptField",
     "referenceNotesField",
     "negativeField",
@@ -377,6 +386,7 @@ function attachListeners() {
   });
 
   document.getElementById("uploadBtn").addEventListener("click", () => document.getElementById("hiddenUpload").click());
+  document.getElementById("approveCandidateBtn").addEventListener("click", () => approveCandidate());
   document.getElementById("hiddenUpload").addEventListener("change", (event) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -1451,6 +1461,7 @@ function renderGrid() {
       const asset = assets.find((item) => item.asset_id === spread.assigned_image_id);
       const previewUrl = getSpreadPreviewUrl(spread, asset);
       const hasImage = Boolean(previewUrl);
+      const artState = getSpreadArtState(spread, asset, hasImage);
       const previewStyle = hasImage
         ? `url(${previewUrl})`
         : fallbackPalette[spread.layout_type] || fallbackPalette.span;
@@ -1471,7 +1482,8 @@ function renderGrid() {
           </div>
           <p class="tile-caption">${spread.excerpt}</p>
           <div class="tile-status">
-            <span class="status-${spread.status.replace(" ", "-")}">${statusLabels[spread.status] || spread.status}</span>
+            <span class="status-${artState}">${artStateLabels[artState] || artState}</span>
+            <span class="status-source">${describeSpreadArtState(artState, asset, spread)}</span>
             <span class="layout-type">${spread.layout_type}</span>
             ${hasImage ? "" : "<span class=\"tile-warning-dot\" title=\"Spread missing art\"></span>"}
           </div>
@@ -1482,6 +1494,25 @@ function renderGrid() {
       `;
     })
     .join("\n");
+}
+
+function getSpreadArtState(spread, asset, hasImage) {
+  if (!hasImage) return "draft";
+  if (asset?.source_type === "project-select") return "approved";
+  if (asset?.source_type === "project-raw") return "candidate";
+  if (!asset && spread.assigned_image_preview?.includes("/storyboard/renders/raw/")) return "candidate";
+  return "assigned";
+}
+
+function describeSpreadArtState(state, asset, spread) {
+  if (state === "approved") return "selected";
+  if (state === "candidate") return "raw render";
+  if (state === "assigned") {
+    if (asset?.source_type) return asset.source_type;
+    if (spread.assigned_image_id) return "assigned asset";
+    return "preview";
+  }
+  return "no art";
 }
 
 function selectSpread(id, options = {}) {
@@ -1526,6 +1557,7 @@ function populateDetail(spread) {
   refs.overlayWash.value = overlay.wash_opacity ?? 0.6;
   const assetPreview = assets.find((item) => item.asset_id === spread.assigned_image_id);
   applyPreview(spread, assetPreview);
+  updateApproveButton(spread, assetPreview);
   updateOverlayVisual(spread);
   updateFullscreenOverlay(spread);
   renderSpreadReferences(spread);
@@ -1587,10 +1619,9 @@ function applyPreview(spread, asset) {
   if (isSpan && hasImage) {
     refs.fullscreenLeft.style.backgroundImage = background;
     refs.fullscreenRight.style.backgroundImage = background;
-    refs.fullscreenLeft.style.backgroundSize = "200% 100%";
-    refs.fullscreenRight.style.backgroundSize = "200% 100%";
     refs.fullscreenLeft.style.backgroundPosition = "left center";
     refs.fullscreenRight.style.backgroundPosition = "right center";
+    applyFullscreenSpreadCover(previewUrl);
   } else {
     refs.fullscreenLeft.style.backgroundImage = background;
     refs.fullscreenRight.style.backgroundImage = background;
@@ -1605,6 +1636,66 @@ function applyPreview(spread, asset) {
       ? "Drop a new image here to replace the current art."
       : "Upload or drop artwork to start the spread preview.";
   }
+}
+
+function loadImageDimensions(url) {
+  if (!url) return Promise.resolve(null);
+  const cached = imageDimensionCache.get(url);
+  if (cached) {
+    return cached instanceof Promise ? cached : Promise.resolve(cached);
+  }
+  const pending = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const dims = { width: img.naturalWidth || 0, height: img.naturalHeight || 0 };
+      imageDimensionCache.set(url, dims);
+      resolve(dims);
+    };
+    img.onerror = () => {
+      imageDimensionCache.delete(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+  imageDimensionCache.set(url, pending);
+  return pending;
+}
+
+async function applyFullscreenSpreadCover(url) {
+  const left = refs.fullscreenLeft;
+  const right = refs.fullscreenRight;
+  if (!left || !right || !url) return;
+  const dims = await loadImageDimensions(url);
+  if (!dims || !dims.width || !dims.height) {
+    left.style.backgroundSize = "";
+    right.style.backgroundSize = "";
+    return;
+  }
+  const activeSpread = spreads.find((item) => item.spread_id === activeSpreadId);
+  if (!activeSpread || getSpreadPreviewUrl(activeSpread, assets.find((item) => item.asset_id === activeSpread.assigned_image_id)) !== url) {
+    return;
+  }
+  const leftWidth = left.clientWidth || 1;
+  const rightWidth = right.clientWidth || leftWidth;
+  const halfHeight = left.clientHeight || 1;
+  const totalWidth = leftWidth + rightWidth;
+  const totalHeight = Math.max(halfHeight, right.clientHeight || halfHeight);
+  const imageRatio = dims.width / dims.height;
+  const containerRatio = totalWidth / totalHeight;
+
+  let renderedWidth = totalWidth;
+  let renderedHeight = totalHeight;
+  if (imageRatio > containerRatio) {
+    renderedWidth = totalHeight * imageRatio;
+  } else {
+    renderedHeight = totalWidth / imageRatio;
+  }
+
+  const widthPercent = (renderedWidth / leftWidth) * 100;
+  const heightPercent = (renderedHeight / halfHeight) * 100;
+  const sizeValue = `${widthPercent}% ${heightPercent}%`;
+  left.style.backgroundSize = sizeValue;
+  right.style.backgroundSize = sizeValue;
 }
 
 function getSpreadPreviewUrl(spread, asset) {
@@ -1903,6 +1994,33 @@ async function assignAsset(assetId) {
   selectSpread(activeSpreadId, { skipRender: true });
 }
 
+async function approveCandidate() {
+  if (!activeSpreadId) return;
+  refs.uploadStatus.textContent = "Promoting candidate into selects...";
+  const response = await fetch(`/api/spreads/${activeSpreadId}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project_id: currentProjectId }),
+  });
+  if (!response.ok) {
+    let message = `Approve failed (${response.status})`;
+    try {
+      const errorBody = await response.json();
+      message = errorBody.error || message;
+    } catch (_err) {
+      // Ignore parse failures and fall back to status text.
+    }
+    refs.uploadStatus.textContent = message;
+    return;
+  }
+  const updated = await response.json();
+  spreads = spreads.map((item) => (item.spread_id === activeSpreadId ? updated : item));
+  await refreshAssets();
+  renderGrid();
+  selectSpread(activeSpreadId, { skipRender: true });
+  refs.uploadStatus.textContent = "Candidate promoted to approved select.";
+}
+
 async function clearAssignment() {
   if (!activeSpreadId) return;
   const updated = await patchSpread(activeSpreadId, { assigned_image_id: null });
@@ -1912,6 +2030,14 @@ async function clearAssignment() {
     spreads = spreads.map((item) => (item.spread_id === activeSpreadId ? updated : item));
     selectSpread(activeSpreadId);
   }
+}
+
+function updateApproveButton(spread, asset) {
+  if (!refs.approveCandidateBtn) return;
+  const artState = getSpreadArtState(spread, asset, Boolean(getSpreadPreviewUrl(spread, asset)));
+  const show = artState === "candidate";
+  refs.approveCandidateBtn.hidden = !show;
+  refs.approveCandidateBtn.disabled = !show;
 }
 
 async function handleFileUpload(file) {

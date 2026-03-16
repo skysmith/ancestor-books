@@ -1531,17 +1531,33 @@ body {
   color: #065f46;
 }
 
+.tile-status .status-candidate {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.tile-status .status-assigned {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
 .tile-status .status-missing {
   background: #ecebff;
   border-color: #a5b4fc;
   color: #3730a3;
 }
 
+.tile-status .status-source,
 .layout-type {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #555;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
 }
 
 .detail-drawer {

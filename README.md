@@ -48,7 +48,8 @@ Each project should follow the same baseline structure, even if some folders sta
 - `storyboard/prompts/` spread prompts for image generation when the book reaches storyboard phase
 - `storyboard/frames/` rough storyboard board images
 - `storyboard/renders/inbox/` incoming image generations for review
-- `storyboard/renders/selects/` chosen renders
+- `storyboard/renders/raw/` work-in-progress renders, review artifacts, and candidate images
+- `storyboard/renders/selects/` chosen renders that are treated as approved selections
 - `outputs/` compiled contact sheets, rough dummy PDFs, and presentation exports
 - `production/production-notes.md` print, sequencing, and handoff notes
 - `production/kdp-checklist.md` per-book publication checklist copied from `templates/kdp-checklist.template.md`
@@ -56,6 +57,11 @@ Each project should follow the same baseline structure, even if some folders sta
 - `scripts/` one-off helpers used by that specific book
 
 Not every book will need every folder immediately, but new books should start from the same contract.
+
+Current dashboard convention:
+
+- `raw/` images can appear in the Layout tab as `Candidate` previews when a spread has no selected image yet.
+- A spread becomes truly approved when its chosen image is promoted into `storyboard/renders/selects/`.
 
 ## How To Add A New Book
 
