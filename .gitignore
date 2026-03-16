@@ -1,1 +1,12 @@
 .DS_Store
+*.pyc
+__pycache__/
+config/
+!config/generation.json
+secrets/
+research/familysearch/exports/
+image-gen/.DS_Store
+image-gen/.dashboard-url
+image-gen/__pycache__/
+image-gen/outputs/
+image-gen/Image Gen Dashboard.app/

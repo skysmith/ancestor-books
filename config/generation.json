@@ -1,0 +1,7 @@
+{
+  "judge_model": "llama2-70b",
+  "judge_threshold": 0.78,
+  "max_recursive_fails": 3,
+  "prompt_adjustment_strategy": "suggestive",
+  "allow_prompt_updates": true
+}

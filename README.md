@@ -6,6 +6,21 @@ Workspace for family-history children's picture books and related production mat
 
 Default publication target is Amazon KDP paperback. See [`KDP.md`](./KDP.md) for the repo-wide publishing checklist and file-prep rules.
 
+## Research Integrations
+
+- [`FAMILYSEARCH.md`](./FAMILYSEARCH.md) documents the local FamilySearch research flow for ancestor-story sourcing.
+- `scripts/familysearch_story_research.py` is the local CLI for FamilySearch OAuth, tree reads, and story-dossier export.
+
+## Image Generation Dashboard
+
+- The image-generation workflow now lives entirely inside this repo at `image-gen/` so the observation pipeline moves with the stories.
+- Launch the dashboard from `personal/projects/ancestor-books/image-gen/Image Gen Dashboard.app` or run `personal/projects/ancestor-books/image-gen/launch_dashboard.sh` to start `dashboard.py` in this folder.
+- Any past references to `/lab/media/image-gen` should now resolve to `personal/projects/ancestor-books/image-gen/outputs/prompts/<timestamp>` (the timestamps in `outputs/prompts/` are linked to each generation folder, and `outputs/images/` mirrors all generated images for quick previews).
+- Generated runs keep their `prompt.txt`, `negative_prompt.txt`, `settings.json`, and logs inside `image-gen/outputs/prompts/<timestamp>/`, and each generation’s image is copied into `image-gen/outputs/images/` for browsing without opening every run folder.
+- Each timestamped bundle also writes `metadata.json` and `images.json` so it can describe the settings and map directly from image names back to the mirror path.
+
+> Legacy `/lab/media/image-gen` is retired; treat `personal/projects/ancestor-books/image-gen/outputs/...` as the active workspace and update any references accordingly.
+
 ## Repository Map
 
 This repository is organized as one folder per mainline book inside `projects/`.
@@ -79,6 +94,7 @@ Use this checklist for future project creation:
 - Export contact sheets and rough dummies into `outputs/` rather than scattering them elsewhere.
 - Copy `templates/kdp-checklist.template.md` into the new project's `production/` folder early so publication requirements stay visible.
 - Keep one project per ancestor story; avoid mixing multiple books in one folder.
+- Keep raw FamilySearch exports local and distill only the relevant story material into `manuscript/source-outline.md`.
 
 ## Series Plan
 

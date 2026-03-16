@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spread Layout Prototype</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Ancestor Books</p>
+        <h1>Spread Layout Cockpit</h1>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="layout">Layout</button>
+        <button class="tab secondary" data-tab="generate">Generate</button>
+        <button class="tab secondary" data-tab="assets">Assets</button>
+      </div>
+      <div class="status-chip">Project: Night of Courage</div>
+    </header>
+
+    <main class="app-shell">
+      <div id="layoutView" class="view-panel active">
+        <section class="layout-grid-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Storyboard</h2>
+              <p class="muted">Each tile is a spread with status, prompt, and preview.</p>
+            </div>
+            <button class="ghost-btn" id="zoomReset">Reset zoom</button>
+          </div>
+          <div class="layout-grid" id="spreadGrid" aria-live="polite"></div>
+        </section>
+
+        <aside class="detail-drawer" id="detailDrawer">
+          <div class="drawer-header">
+            <h3 id="drawerTitle">Select a spread</h3>
+            <button class="ghost-btn" id="fullscreenToggle">Full-screen view</button>
+          </div>
+
+          <div class="preview-shell">
+            <div class="preview" id="spreadPreview">
+              <div class="preview-overlay" id="previewOverlay">Text overlay</div>
+              <div class="preview-drop-target" id="dropTarget">
+                <p>Drag &amp; drop art here</p>
+                <p class="muted">Files dropped here upload straight to the selected spread.</p>
+                <p>or use the actions below</p>
+              </div>
+            </div>
+            <div class="tile-actions">
+              <button class="ghost-btn" id="uploadBtn" type="button">Upload art</button>
+              <button class="ghost-btn" id="launchGeneratorBtn" type="button">Launch generator</button>
+              <button class="ghost-btn" id="chooseAssetBtn" type="button">Choose existing</button>
+              <button class="ghost-btn" id="clearAssignmentBtn" type="button">Clear assignment</button>
+            </div>
+            <div class="placement-row">
+              <label><input type="radio" name="placement" value="left" /> Left page</label>
+              <label><input type="radio" name="placement" value="right" /> Right page</label>
+              <label><input type="radio" name="placement" value="span" checked /> Full spread</label>
+              <label><input type="radio" name="placement" value="inset" /> Inset</label>
+            </div>
+            <div class="status-row">
+              <span class="chip" id="promptStatus">Prompt: draft</span>
+              <span class="muted upload-status" id="uploadStatus">Drop an image here or use Upload art.</span>
+            </div>
+          </div>
+
+          <section class="drawer-panel">
+            <div class="drawer-panel-header">
+              <h4>Prompt + settings</h4>
+              <span class="muted" id="lastUpdated">Last saved just now</span>
+            </div>
+            <label>
+              Prompt
+              <textarea id="promptField" rows="3"></textarea>
+            </label>
+            <label>
+              Negative prompt
+              <textarea id="negativeField" rows="2"></textarea>
+            </label>
+            <label>
+              Seed
+              <input type="number" id="seedField" min="0" step="1" />
+            </label>
+          </section>
+
+          <section class="drawer-panel">
+            <div class="drawer-panel-header">
+              <h4>Text overlay</h4>
+              <div class="drawer-panel-actions">
+                <button class="ghost-btn" id="snapOverlayBtn" type="button">Snap to safe margin</button>
+              </div>
+              <label class="inline">
+                <input type="checkbox" id="overlayVisible" />
+                Visible
+              </label>
+            </div>
+            <label>
+              X offset (%)
+              <input type="range" id="overlayX" min="0" max="80" />
+            </label>
+            <label>
+              Y offset (%)
+              <input type="range" id="overlayY" min="0" max="80" />
+            </label>
+            <label>
+              Width (%)
+              <input type="range" id="overlayWidth" min="30" max="100" />
+            </label>
+            <label>
+              Alignment
+              <select id="overlayAlignment">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+           <label>
+             Wash opacity
+             <input type="range" id="overlayWash" min="0" max="1" step="0.05" />
+           </label>
+         </section>
+
+          <section class="drawer-panel judge-overrides">
+            <div class="drawer-panel-header">
+              <h4>Judge overrides</h4>
+              <button class="ghost-btn" id="clearJudgeOverridesBtn" type="button">Reset to defaults</button>
+            </div>
+            <label>
+              Judge model
+              <input type="text" id="drawerJudgeModel" />
+            </label>
+            <label>
+              Threshold
+              <input type="number" id="drawerJudgeThreshold" min="0" max="1" step="0.01" />
+            </label>
+            <label>
+              Max fails
+              <input type="number" id="drawerMaxFails" min="0" step="1" />
+            </label>
+            <label>
+              Prompt strategy
+              <select id="drawerPromptStrategy">
+                <option value="suggestive">Suggest fixes</option>
+                <option value="static">Keep prompt</option>
+              </select>
+            </label>
+            <label class="inline">
+              <input type="checkbox" id="drawerAllowUpdates" />
+              Allow prompt updates
+            </label>
+          </section>
+
+          <section class="drawer-panel">
+            <h4>Notes &amp; status</h4>
+            <label>
+              Notes
+              <textarea id="notesField" rows="3"></textarea>
+            </label>
+            <label>
+              Status
+              <select id="statusSelect">
+                <option value="draft">Draft</option>
+                <option value="needs-work">Needs work</option>
+                <option value="approved">Approved</option>
+                <option value="missing">Missing</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="drawer-panel asset-chooser">
+            <h4>Assets</h4>
+            <div class="asset-controls">
+              <select id="assetSelect"></select>
+              <button class="ghost-btn" id="assignAssetBtn">Assign</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div id="generateView" class="view-panel hidden">
+        <section class="generate-panel">
+          <header class="panel-header">
+            <div>
+              <h2>Generate art</h2>
+              <p class="muted">Runs the local generator with recursive judge checks.</p>
+            </div>
+            <button class="ghost-btn" id="generateReset">Reset form</button>
+          </header>
+          <div class="generate-grid">
+            <div class="generate-form">
+              <label>
+                Select spread
+                <select id="generateSpreadSelect"></select>
+              </label>
+              <label>
+                Prompt
+                <textarea id="generatePrompt" rows="3"></textarea>
+              </label>
+              <label>
+                Negative prompt
+                <textarea id="generateNegative" rows="2"></textarea>
+              </label>
+              <label>
+                Seed
+                <input type="number" id="generateSeed" min="0" step="1" />
+              </label>
+            </div>
+            <div class="generate-settings">
+              <h4>Recursive judge settings</h4>
+              <label>
+                Judge model
+                <input type="text" id="judgeModel" />
+              </label>
+              <label>
+                Threshold
+                <input type="number" id="judgeThreshold" min="0" max="1" step="0.01" />
+              </label>
+              <label>
+                Max fails
+                <input type="number" id="maxFails" min="0" step="1" />
+              </label>
+              <label>
+                Adjustment strategy
+                <select id="promptStrategy">
+                  <option value="suggestive">Suggest fixes</option>
+                  <option value="static">Keep prompt</option>
+                </select>
+              </label>
+              <label>
+                Allow prompt updates
+                <input type="checkbox" id="allowUpdates" />
+              </label>
+            </div>
+          </div>
+
+          <div class="generate-actions">
+            <button class="primary-btn" id="runGeneratorBtn">Run generator</button>
+            <p class="muted" id="generationStatus">Idle</p>
+          </div>
+
+          <div class="generate-log">
+            <h4>Run log</h4>
+            <ul id="generationLog"></ul>
+          </div>
+        </section>
+      </div>
+
+      <div id="assetsView" class="view-panel hidden">
+        <section class="assets-panel">
+          <header class="panel-header">
+            <div>
+              <h2>Assets library</h2>
+              <p class="muted">Uploads + generated content organized per spread.</p>
+            </div>
+            <button class="ghost-btn" id="addAssetBtn">Add placeholder</button>
+          </header>
+          <div class="assets-filters">
+            <label>
+              Spread
+              <select id="assetSpreadFilter">
+                <option value="">All spreads</option>
+              </select>
+            </label>
+            <label>
+              Source
+              <select id="assetSourceFilter">
+                <option value="">Any</option>
+                <option value="run">Run</option>
+                <option value="upload">Upload</option>
+              </select>
+            </label>
+            <label>
+              Search
+              <input type="text" id="assetSearch" placeholder="Asset label or ID" />
+            </label>
+            <button class="ghost-btn" id="assetFilterReset">Reset filters</button>
+            <button class="ghost-btn" id="assetLoadMore">Load more</button>
+          </div>
+          <p class="assets-panel-meta" id="assetFilterMeta"></p>
+          <div class="assets-list" id="assetsList"></div>
+        </section>
+      </div>
+    </main>
+
+    <div class="fullscreen-overlay" id="fullscreenOverlay" aria-hidden="true">
+      <div class="fullscreen-shell">
+        <div class="fullscreen-shell-header">
+          <button class="close-btn" id="closeFullscreen">Close</button>
+          <button class="ghost-btn" id="fullscreenToggleOverlay" type="button">Toggle text overlay</button>
+        </div>
+        <div class="fullscreen-pages">
+          <div class="fullscreen-page left">
+            <p class="page-title">Left page</p>
+            <div class="fullscreen-preview" id="fullscreenLeft">
+              <div class="fullscreen-overlay-text" id="fullscreenLeftOverlay"></div>
+            </div>
+          </div>
+          <div class="fullscreen-page right">
+            <p class="page-title">Right page</p>
+            <div class="fullscreen-preview" id="fullscreenRight">
+              <div class="fullscreen-overlay-text" id="fullscreenRightOverlay"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="hiddenUpload" accept="image/*" style="display:none" />
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
