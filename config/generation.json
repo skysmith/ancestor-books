@@ -1,7 +1,44 @@
 {
-  "judge_model": "llama2-70b",
+  "generator_backend": "zimage_local",
+  "generator_model": "leejet/Z-Image-Turbo-GGUF:z_image_turbo-Q4_0",
+  "generator_checkpoint": "sd_xl_base_1.0.safetensors",
+  "generator_size": "1024x576",
+  "feedback_loop_enabled": true,
+  "lora_name": "",
+  "lora_strength": 0.8,
+  "available_loras": [
+    {
+      "name": "Classic_Painting_Z_Image_Turbo_v1_renderartist_1750.safetensors",
+      "label": "Classic Painting Z (renderartist)",
+      "strength": 0.35
+    }
+  ],
+  "judge_model": "qwen3.5:9b",
   "judge_threshold": 0.78,
   "max_recursive_fails": 3,
   "prompt_adjustment_strategy": "suggestive",
-  "allow_prompt_updates": true
+  "allow_prompt_updates": true,
+  "comfyui": {
+    "base_url": "http://127.0.0.1:8188",
+    "workflow_template": "/Users/sky/Documents/codex/personal/projects/ancestor-books/image-gen/system/comfyui_text2img_lora_workflow.json",
+    "default_checkpoint": "sd_xl_base_1.0.safetensors",
+    "default_sampler": "dpmpp_2m",
+    "default_scheduler": "karras",
+    "default_cfg": 7.0,
+    "default_steps": 30
+  },
+  "zimage_local": {
+    "binary_path": "/Users/sky/Documents/codex/lab/ai-art/local/stable-diffusion.cpp/build-cpu/bin/sd-cli",
+    "diffusion_model": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/z_image_turbo-Q4_0.gguf",
+    "text_encoder": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+    "vae": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/diffusion_pytorch_model.safetensors",
+    "default_cfg_scale": 1.0,
+    "default_sampling_method": "euler",
+    "offload_to_cpu": true,
+    "keep_clip_on_cpu": true,
+    "diffusion_flash_attn": true,
+    "extra_args": []
+  },
+  "review_models": "qwen3.5:9b",
+  "prompt_fixer_model": "qwen3.5:9b"
 }

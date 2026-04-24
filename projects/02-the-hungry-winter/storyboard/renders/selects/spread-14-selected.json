@@ -1,7 +1,0 @@
-{
-  "slug": "spread-14",
-  "prompt": "Painterly historical realism for a children's Revolutionary War picture book. Scene focus: hoping they might find enough to keep marching one more day. Illustration direction: very simple final image, soldiers disappearing into the dark or faint dawn, emphasizing endurance rather than triumph. Make this a minimal distance composition with tiny figures or nearly empty landscape, not a character close-up. The environment and path matter more than faces. Very sparse value structure, subdued horizon, strong feeling of continuation and smallness. Large text-safe field. No foreground portrait, no campfire focal point, no heroic pose. Additional global direction: painterly historical realism, Revolutionary War winter hardship, cold gray-blue palette with warmth scarce, landscape orientation, clear text-safe composition. Do not repeat the same medium-close portrait framing across spreads. Each image must obey the spread-specific composition instructions exactly.",
-  "model": "gpt-image-1",
-  "size": "1536x1024",
-  "version": "v002"
-}

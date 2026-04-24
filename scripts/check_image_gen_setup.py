@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 APP_ROOT = REPO_ROOT / "image-gen"
 MANIFEST_PATH = APP_ROOT / "project-requirements.json"
+GENERATION_CONFIG_PATH = REPO_ROOT / "config" / "generation.json"
 MAC_APP_OLLAMA = Path("/Applications/Ollama.app/Contents/Resources/ollama")
 
 
@@ -26,6 +27,14 @@ class CheckResult:
 
 def load_manifest() -> dict:
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+
+
+def load_generation_config() -> dict:
+    try:
+        payload = json.loads(GENERATION_CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def find_ollama_binary() -> Path | None:
@@ -129,7 +138,39 @@ def check_model_runtime(ollama_bin: Path, model_name: str, timeout: int = 15) ->
     return CheckResult("PASS", "Generator runtime healthy", model_name)
 
 
-def check_ollama(manifest: dict) -> list[CheckResult]:
+def normalize_generator_backend(value: object) -> str:
+    text = str(value or "").strip().lower()
+    return text or "comfyui"
+
+
+def zimage_local_config(generation_config: dict) -> dict:
+    value = generation_config.get("zimage_local")
+    return value if isinstance(value, dict) else {}
+
+
+def path_result(label: str, path_value: object, *, required: bool = True) -> CheckResult:
+    raw = str(path_value or "").strip()
+    if not raw:
+        level = "FAIL" if required else "WARN"
+        return CheckResult(level, label, "Not configured")
+    path = Path(raw).expanduser()
+    if path.exists():
+        return CheckResult("PASS", label, str(path))
+    level = "FAIL" if required else "WARN"
+    return CheckResult(level, label, str(path))
+
+
+def check_zimage_local(generation_config: dict) -> list[CheckResult]:
+    config = zimage_local_config(generation_config)
+    return [
+        path_result("stable-diffusion.cpp binary", config.get("binary_path")),
+        path_result("Z-Image-Turbo GGUF diffusion model", config.get("diffusion_model")),
+        path_result("Qwen3-4B-Instruct-2507 GGUF text encoder", config.get("text_encoder")),
+        path_result("Z-Image ae.safetensors VAE", config.get("vae")),
+    ]
+
+
+def check_ollama(manifest: dict, generation_config: dict) -> list[CheckResult]:
     results: list[CheckResult] = []
     ollama_bin = find_ollama_binary()
     if not ollama_bin:
@@ -142,6 +183,7 @@ def check_ollama(manifest: dict) -> list[CheckResult]:
         results.append(CheckResult("FAIL", "Ollama list failed", str(exc)))
         return results
 
+    selected_backend = normalize_generator_backend(generation_config.get("generator_backend"))
     required_models = []
     models = manifest.get("models", {})
     for bucket in ("generator", "review", "prompt_fixer"):
@@ -149,13 +191,23 @@ def check_ollama(manifest: dict) -> list[CheckResult]:
 
     for model in required_models:
         name = model.get("name", "")
+        role = str(model.get("role", "")).strip()
+        required = bool(model.get("required", False))
         if not name:
+            continue
+        if selected_backend == "zimage_local" and role.startswith("image_generation_local_"):
+            continue
+        if selected_backend == "zimage_local" and role in {
+            "image_generation_checkpoint",
+            "image_generation_backend",
+            "image_generation_compat",
+        }:
             continue
         if model_present(name, installed):
             results.append(CheckResult("PASS", "Model present", name))
-            if model.get("role") == "image_generation":
+            if role == "image_generation":
                 results.append(check_model_runtime(ollama_bin, name))
-        else:
+        elif required:
             results.append(CheckResult("FAIL", "Model missing", name))
     return results
 
@@ -191,9 +243,12 @@ def main() -> int:
         print(f"Manifest not found: {MANIFEST_PATH}", file=sys.stderr)
         return 1
     manifest = load_manifest()
+    generation_config = load_generation_config()
     results: list[CheckResult] = []
     results.extend(check_paths(manifest))
-    results.extend(check_ollama(manifest))
+    if normalize_generator_backend(generation_config.get("generator_backend")) == "zimage_local":
+        results.extend(check_zimage_local(generation_config))
+    results.extend(check_ollama(manifest, generation_config))
     return summarize(results)
 
 
