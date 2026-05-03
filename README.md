@@ -4,6 +4,24 @@ Workspace for family-history children's picture books and related production mat
 
 This repository should keep durable source material, manuscripts, prompts, production scripts, and project notes in Git. Generated artwork, proof PDFs, KDP uploads, app bundles, temporary exports, and raw research exports should stay local.
 
+## Workspace Metadata
+
+- Name: Ancestor Books
+- Domain: personal
+- Status: active
+- Purpose: Family-history children's books and the surrounding writing, research, and production workflow
+- Path: personal/projects/ancestor-books
+- Related:
+  - personal/projects
+  - personal/data
+  - lab/media
+  - lab/ai-art
+- Tags:
+  - books
+  - family-history
+  - publishing
+  - illustration
+
 ## Current Focus
 
 - `projects/daniel-cook-three-stories/` - combined Daniel Cook picture-book dummy built around three Revolutionary War family stories.

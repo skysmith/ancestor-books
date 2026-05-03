@@ -28,16 +28,19 @@
     "default_steps": 30
   },
   "zimage_local": {
-    "binary_path": "/Users/sky/Documents/codex/lab/ai-art/local/stable-diffusion.cpp/build-cpu/bin/sd-cli",
+    "binary_path": "/Users/sky/Documents/codex/lab/ai-art/local/stable-diffusion.cpp/build/bin/sd-cli",
     "diffusion_model": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/z_image_turbo-Q4_0.gguf",
     "text_encoder": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
     "vae": "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/diffusion_pytorch_model.safetensors",
     "default_cfg_scale": 1.0,
     "default_sampling_method": "euler",
     "offload_to_cpu": true,
-    "keep_clip_on_cpu": true,
+    "keep_clip_on_cpu": false,
     "diffusion_flash_attn": true,
-    "extra_args": []
+    "extra_args": [
+      "--lora-model-dir",
+      "/Users/sky/Documents/codex/lab/ai-art/local/models/zimage/loras"
+    ]
   },
   "review_models": "qwen3.5:9b",
   "prompt_fixer_model": "qwen3.5:9b"
